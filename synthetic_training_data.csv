@@ -1,0 +1,201 @@
+id,Problem_Category,Reporter_Type,Location,class_No,Impact_Scope,Occurrence_Pattern,priority_level,priority_text
+1,Academic,Faculty,Center Square,,Single person affected,Weekly,0,Low
+2,IT/Technical,Admin,Lab,483.0,Everyone affected,First occurrence,2,High
+3,Infrastructure,Visitor,Center Square,,Single person affected,Recurring issue,1,Medium
+4,Maintenance,Faculty,Center Square,,Single person affected,Recurring issue,1,Medium
+5,Safety/Security,Visitor,Class,345.0,Whole class affected,Recurring issue,3,Critical
+6,Administrative,Visitor,Institute,,Everyone affected,Weekly,2,High
+7,Administrative,Faculty,Hall,,Whole class affected,Weekly,1,Medium
+8,Administrative,Student,Institute,,Whole class affected,Daily,2,High
+9,Infrastructure,Faculty,Class,494.0,Everyone affected,Daily,3,Critical
+10,Safety/Security,Faculty,Lab,332.0,Single person affected,First occurrence,1,Medium
+11,IT/Technical,Student,Class,218.0,Single person affected,Weekly,1,Medium
+12,Academic,Faculty,Class,321.0,Whole class affected,Recurring issue,1,Medium
+13,Infrastructure,Visitor,Hall,,Single person affected,Weekly,1,Medium
+14,Infrastructure,Faculty,Lab,440.0,Single person affected,First occurrence,0,Low
+15,Maintenance,Faculty,Hall,,Everyone affected,Daily,3,Critical
+16,Maintenance,Visitor,Hall,,Everyone affected,Daily,3,Critical
+17,Administrative,Visitor,Lab,208.0,Everyone affected,First occurrence,1,Medium
+18,Infrastructure,Faculty,Hall,,Whole class affected,Recurring issue,2,High
+19,Infrastructure,Visitor,Class,268.0,Everyone affected,Weekly,3,Critical
+20,IT/Technical,Admin,Class,113.0,Everyone affected,Weekly,3,Critical
+21,Infrastructure,Faculty,Hall,,Single person affected,Daily,2,High
+22,Administrative,Visitor,Lab,161.0,Whole class affected,First occurrence,0,Low
+23,Administrative,Student,Lab,147.0,Single person affected,Recurring issue,0,Low
+24,Academic,Visitor,Class,131.0,Everyone affected,Daily,2,High
+25,Administrative,Admin,Hall,,Everyone affected,First occurrence,1,Medium
+26,Safety/Security,Faculty,Hall,,Everyone affected,Weekly,3,Critical
+27,Administrative,Faculty,Class,114.0,Single person affected,Weekly,0,Low
+28,IT/Technical,Student,Institute,,Everyone affected,Daily,3,Critical
+29,Academic,Faculty,Class,402.0,Everyone affected,Recurring issue,2,High
+30,Academic,Visitor,Hall,,Whole class affected,Recurring issue,1,Medium
+31,Administrative,Visitor,Class,334.0,Single person affected,First occurrence,0,Low
+32,Academic,Faculty,Lab,244.0,Whole class affected,First occurrence,0,Low
+33,IT/Technical,Visitor,Center Square,,Everyone affected,First occurrence,2,High
+34,IT/Technical,Admin,Institute,,Whole class affected,Daily,3,Critical
+35,Safety/Security,Student,Class,121.0,Everyone affected,Recurring issue,3,Critical
+36,Maintenance,Admin,Lab,399.0,Everyone affected,First occurrence,2,High
+37,Safety/Security,Admin,Center Square,,Whole class affected,Daily,3,Critical
+38,Administrative,Faculty,Hall,,Everyone affected,First occurrence,1,Medium
+39,Safety/Security,Faculty,Class,360.0,Single person affected,Weekly,2,High
+40,IT/Technical,Student,Center Square,,Everyone affected,Daily,3,Critical
+41,Administrative,Visitor,Lab,471.0,Everyone affected,Recurring issue,2,High
+42,Infrastructure,Admin,Lab,150.0,Single person affected,Weekly,1,Medium
+43,Maintenance,Admin,Center Square,,Single person affected,Daily,2,High
+44,IT/Technical,Visitor,Center Square,,Everyone affected,Recurring issue,3,Critical
+45,Administrative,Faculty,Lab,238.0,Single person affected,Recurring issue,0,Low
+46,Academic,Student,Institute,,Single person affected,Weekly,0,Low
+47,Academic,Faculty,Hall,,Single person affected,Recurring issue,0,Low
+48,Safety/Security,Admin,Class,242.0,Whole class affected,Daily,3,Critical
+49,Safety/Security,Faculty,Lab,472.0,Everyone affected,Recurring issue,3,Critical
+50,Safety/Security,Admin,Lab,186.0,Single person affected,First occurrence,1,Medium
+51,Academic,Faculty,Class,332.0,Everyone affected,Daily,2,High
+52,Maintenance,Faculty,Hall,,Everyone affected,Recurring issue,3,Critical
+53,Administrative,Student,Lab,135.0,Everyone affected,Recurring issue,2,High
+54,Academic,Student,Institute,,Whole class affected,Daily,2,High
+55,Infrastructure,Admin,Institute,,Whole class affected,Weekly,2,High
+56,Maintenance,Faculty,Lab,215.0,Single person affected,Daily,2,High
+57,Academic,Faculty,Hall,,Single person affected,Weekly,0,Low
+58,Safety/Security,Visitor,Center Square,,Whole class affected,Weekly,3,Critical
+59,Academic,Student,Hall,,Everyone affected,Recurring issue,2,High
+60,Academic,Visitor,Class,232.0,Single person affected,Daily,1,Medium
+61,Academic,Admin,Class,101.0,Everyone affected,Recurring issue,2,High
+62,Maintenance,Visitor,Class,353.0,Whole class affected,Weekly,2,High
+63,Infrastructure,Admin,Lab,447.0,Whole class affected,First occurrence,1,Medium
+64,Academic,Student,Center Square,,Single person affected,First occurrence,0,Low
+65,Safety/Security,Admin,Center Square,,Everyone affected,Recurring issue,3,Critical
+66,Administrative,Student,Class,139.0,Single person affected,First occurrence,0,Low
+67,Maintenance,Visitor,Institute,,Whole class affected,Recurring issue,2,High
+68,Infrastructure,Faculty,Hall,,Whole class affected,Weekly,2,High
+69,Academic,Student,Center Square,,Whole class affected,First occurrence,0,Low
+70,Administrative,Faculty,Lab,500.0,Whole class affected,Daily,2,High
+71,Maintenance,Student,Class,166.0,Whole class affected,First occurrence,1,Medium
+72,Infrastructure,Admin,Institute,,Everyone affected,Weekly,3,Critical
+73,Administrative,Admin,Class,103.0,Everyone affected,Recurring issue,2,High
+74,Infrastructure,Faculty,Hall,,Single person affected,First occurrence,0,Low
+75,Academic,Faculty,Institute,,Whole class affected,Recurring issue,1,Medium
+76,Academic,Admin,Lab,307.0,Whole class affected,Recurring issue,1,Medium
+77,Safety/Security,Faculty,Center Square,,Single person affected,First occurrence,1,Medium
+78,Maintenance,Visitor,Center Square,,Whole class affected,Recurring issue,2,High
+79,IT/Technical,Faculty,Center Square,,Single person affected,Weekly,1,Medium
+80,Academic,Visitor,Class,302.0,Everyone affected,Recurring issue,2,High
+81,Maintenance,Admin,Institute,,Whole class affected,Recurring issue,2,High
+82,Maintenance,Student,Center Square,,Everyone affected,Recurring issue,3,Critical
+83,Maintenance,Faculty,Class,440.0,Everyone affected,Daily,3,Critical
+84,Administrative,Visitor,Center Square,,Whole class affected,Daily,2,High
+85,Academic,Visitor,Institute,,Everyone affected,Daily,2,High
+86,Infrastructure,Admin,Center Square,,Single person affected,Weekly,1,Medium
+87,Safety/Security,Admin,Lab,391.0,Single person affected,Daily,2,High
+88,Maintenance,Student,Hall,,Single person affected,Recurring issue,1,Medium
+89,IT/Technical,Admin,Class,312.0,Single person affected,First occurrence,0,Low
+90,Administrative,Student,Lab,447.0,Single person affected,Weekly,0,Low
+91,Administrative,Faculty,Center Square,,Whole class affected,Recurring issue,1,Medium
+92,Academic,Faculty,Center Square,,Everyone affected,Daily,2,High
+93,Academic,Visitor,Center Square,,Single person affected,First occurrence,0,Low
+94,Infrastructure,Student,Class,444.0,Whole class affected,Weekly,2,High
+95,IT/Technical,Visitor,Class,293.0,Single person affected,Daily,2,High
+96,Infrastructure,Student,Institute,,Whole class affected,Recurring issue,2,High
+97,IT/Technical,Visitor,Center Square,,Everyone affected,Recurring issue,3,Critical
+98,IT/Technical,Faculty,Lab,151.0,Single person affected,First occurrence,0,Low
+99,Maintenance,Admin,Institute,,Single person affected,Recurring issue,1,Medium
+100,Safety/Security,Visitor,Lab,284.0,Single person affected,Recurring issue,2,High
+101,Safety/Security,Faculty,Class,446.0,Whole class affected,Weekly,3,Critical
+102,IT/Technical,Faculty,Hall,,Whole class affected,First occurrence,1,Medium
+103,Safety/Security,Student,Center Square,,Everyone affected,First occurrence,2,High
+104,Administrative,Admin,Hall,,Single person affected,Weekly,0,Low
+105,Safety/Security,Student,Center Square,,Single person affected,First occurrence,1,Medium
+106,Administrative,Visitor,Institute,,Single person affected,First occurrence,0,Low
+107,Safety/Security,Student,Center Square,,Single person affected,Weekly,2,High
+108,Infrastructure,Student,Class,101.0,Everyone affected,First occurrence,2,High
+109,Academic,Faculty,Center Square,,Whole class affected,Daily,2,High
+110,Maintenance,Faculty,Institute,,Everyone affected,Daily,3,Critical
+111,Infrastructure,Student,Class,165.0,Everyone affected,Weekly,3,Critical
+112,Administrative,Student,Hall,,Single person affected,Daily,1,Medium
+113,Safety/Security,Visitor,Class,319.0,Everyone affected,Daily,3,Critical
+114,Academic,Visitor,Center Square,,Single person affected,Daily,1,Medium
+115,Academic,Faculty,Lab,214.0,Whole class affected,Weekly,1,Medium
+116,Safety/Security,Student,Institute,,Whole class affected,Daily,3,Critical
+117,Safety/Security,Faculty,Class,113.0,Single person affected,First occurrence,1,Medium
+118,Safety/Security,Visitor,Lab,239.0,Single person affected,Recurring issue,2,High
+119,Academic,Visitor,Hall,,Single person affected,Recurring issue,0,Low
+120,Maintenance,Faculty,Class,139.0,Single person affected,Weekly,1,Medium
+121,Academic,Admin,Class,103.0,Whole class affected,Weekly,1,Medium
+122,Safety/Security,Visitor,Center Square,,Whole class affected,Weekly,3,Critical
+123,Maintenance,Visitor,Hall,,Single person affected,Weekly,1,Medium
+124,Academic,Faculty,Class,454.0,Everyone affected,Weekly,2,High
+125,IT/Technical,Student,Center Square,,Single person affected,Recurring issue,1,Medium
+126,Infrastructure,Visitor,Lab,320.0,Everyone affected,First occurrence,2,High
+127,Academic,Visitor,Institute,,Everyone affected,Recurring issue,2,High
+128,Administrative,Faculty,Lab,422.0,Everyone affected,First occurrence,1,Medium
+129,Administrative,Admin,Class,152.0,Single person affected,First occurrence,0,Low
+130,Academic,Student,Center Square,,Single person affected,Weekly,0,Low
+131,Administrative,Admin,Institute,,Everyone affected,Daily,2,High
+132,IT/Technical,Visitor,Center Square,,Everyone affected,First occurrence,2,High
+133,IT/Technical,Student,Center Square,,Everyone affected,Recurring issue,3,Critical
+134,Maintenance,Faculty,Lab,160.0,Single person affected,Recurring issue,1,Medium
+135,Maintenance,Visitor,Center Square,,Whole class affected,Weekly,2,High
+136,Academic,Faculty,Class,245.0,Single person affected,Recurring issue,0,Low
+137,IT/Technical,Student,Lab,224.0,Everyone affected,First occurrence,2,High
+138,Infrastructure,Admin,Lab,135.0,Whole class affected,Daily,3,Critical
+139,Academic,Admin,Class,232.0,Everyone affected,First occurrence,1,Medium
+140,Academic,Admin,Center Square,,Whole class affected,Weekly,1,Medium
+141,Administrative,Admin,Institute,,Single person affected,First occurrence,0,Low
+142,Administrative,Faculty,Center Square,,Everyone affected,First occurrence,1,Medium
+143,IT/Technical,Student,Hall,,Everyone affected,Recurring issue,3,Critical
+144,Academic,Admin,Lab,227.0,Whole class affected,Weekly,1,Medium
+145,Administrative,Admin,Institute,,Whole class affected,Recurring issue,1,Medium
+146,Maintenance,Faculty,Class,343.0,Everyone affected,Recurring issue,3,Critical
+147,Administrative,Faculty,Center Square,,Everyone affected,Weekly,2,High
+148,Academic,Student,Hall,,Single person affected,Daily,1,Medium
+149,Maintenance,Faculty,Hall,,Everyone affected,First occurrence,2,High
+150,Maintenance,Faculty,Center Square,,Single person affected,First occurrence,0,Low
+151,Maintenance,Student,Institute,,Single person affected,First occurrence,0,Low
+152,Infrastructure,Visitor,Class,467.0,Single person affected,First occurrence,0,Low
+153,Academic,Visitor,Center Square,,Single person affected,Recurring issue,0,Low
+154,Maintenance,Student,Hall,,Whole class affected,Daily,3,Critical
+155,Academic,Visitor,Lab,239.0,Everyone affected,Weekly,2,High
+156,IT/Technical,Faculty,Hall,,Everyone affected,Weekly,3,Critical
+157,Infrastructure,Admin,Lab,141.0,Whole class affected,First occurrence,1,Medium
+158,Academic,Student,Center Square,,Whole class affected,Daily,2,High
+159,IT/Technical,Visitor,Institute,,Single person affected,Daily,2,High
+160,IT/Technical,Visitor,Center Square,,Whole class affected,Weekly,2,High
+161,Administrative,Student,Class,431.0,Single person affected,Weekly,0,Low
+162,Infrastructure,Visitor,Institute,,Everyone affected,Weekly,3,Critical
+163,Academic,Admin,Class,340.0,Whole class affected,Daily,2,High
+164,Academic,Visitor,Lab,234.0,Whole class affected,Daily,2,High
+165,Infrastructure,Admin,Lab,408.0,Single person affected,Weekly,1,Medium
+166,IT/Technical,Admin,Lab,311.0,Whole class affected,Weekly,2,High
+167,Maintenance,Student,Hall,,Whole class affected,Weekly,2,High
+168,Administrative,Student,Hall,,Everyone affected,Daily,2,High
+169,Academic,Student,Lab,480.0,Whole class affected,Daily,2,High
+170,IT/Technical,Faculty,Institute,,Single person affected,Recurring issue,1,Medium
+171,Maintenance,Admin,Center Square,,Single person affected,Daily,2,High
+172,Maintenance,Faculty,Lab,475.0,Everyone affected,Weekly,3,Critical
+173,Administrative,Faculty,Class,112.0,Single person affected,Daily,1,Medium
+174,Maintenance,Student,Center Square,,Everyone affected,First occurrence,2,High
+175,Infrastructure,Faculty,Institute,,Everyone affected,Daily,3,Critical
+176,Academic,Admin,Institute,,Whole class affected,First occurrence,0,Low
+177,Infrastructure,Admin,Lab,233.0,Single person affected,First occurrence,0,Low
+178,IT/Technical,Faculty,Lab,467.0,Whole class affected,Daily,3,Critical
+179,Administrative,Student,Institute,,Single person affected,Recurring issue,0,Low
+180,Academic,Faculty,Class,399.0,Single person affected,Weekly,0,Low
+181,Maintenance,Visitor,Hall,,Whole class affected,Weekly,2,High
+182,IT/Technical,Student,Lab,210.0,Everyone affected,Daily,3,Critical
+183,Safety/Security,Student,Institute,,Single person affected,First occurrence,1,Medium
+184,Safety/Security,Visitor,Institute,,Everyone affected,First occurrence,2,High
+185,Administrative,Admin,Institute,,Everyone affected,Weekly,2,High
+186,Infrastructure,Visitor,Class,372.0,Single person affected,First occurrence,0,Low
+187,Administrative,Student,Hall,,Everyone affected,First occurrence,1,Medium
+188,Maintenance,Visitor,Institute,,Everyone affected,Daily,3,Critical
+189,IT/Technical,Visitor,Institute,,Single person affected,Daily,2,High
+190,Administrative,Visitor,Center Square,,Everyone affected,Weekly,2,High
+191,Safety/Security,Student,Lab,387.0,Whole class affected,Weekly,3,Critical
+192,Administrative,Visitor,Institute,,Single person affected,First occurrence,0,Low
+193,Safety/Security,Admin,Class,104.0,Single person affected,Daily,2,High
+194,Academic,Admin,Institute,,Everyone affected,Weekly,2,High
+195,Maintenance,Visitor,Center Square,,Whole class affected,Daily,3,Critical
+196,Academic,Faculty,Institute,,Whole class affected,First occurrence,0,Low
+197,Administrative,Faculty,Lab,147.0,Single person affected,Daily,1,Medium
+198,Safety/Security,Faculty,Class,229.0,Single person affected,Recurring issue,2,High
+199,Academic,Student,Center Square,,Whole class affected,Weekly,1,Medium
+200,Infrastructure,Admin,Institute,,Everyone affected,Recurring issue,3,Critical
