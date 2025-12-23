@@ -52,7 +52,8 @@ import {
   UserPlus,
   School,
   FileSpreadsheet,
-  Camera
+  Camera,
+  Eraser
 } from 'lucide-react';
 import FaceUploadComponent from '@/components/FaceUploadComponent';
 
@@ -67,6 +68,7 @@ interface ClassDetail {
   description?: string;
   created_at?: string;
   student_count?: number;
+  timetable_url?: string;
 }
 
 interface StudentDetail {
@@ -133,6 +135,26 @@ const ClassManagement: React.FC = () => {
   // Face training state
   const [faceTrainingStudent, setFaceTrainingStudent] = useState<StudentDetail | null>(null);
 
+  // Timetable upload state
+  const [timetableFile, setTimetableFile] = useState<File | null>(null);
+  const [timetableUploading, setTimetableUploading] = useState(false);
+  const [timetableError, setTimetableError] = useState('');
+
+  // Structured timetable (6 slots per day)
+  const timetableDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const timetableTimeSlots = [
+    '09:10-10:10',
+    '10:10-11:10',
+    '11:10-12:10',
+    '12:10-01:10',
+    '02:20-03:20',
+    '03:20-04:20'
+  ];
+  type SlotEntry = { course: string; professor: string; room: string; is_lab?: boolean; batch_number?: number; lab_id?: string };
+  const [manualTimetable, setManualTimetable] = useState<Record<number, SlotEntry[]>>({});
+  const [timetableSaving, setTimetableSaving] = useState(false);
+  const [labMode, setLabMode] = useState<Record<string, { enabled: boolean; batches: number }>>({});
+
   const departments = ['IT', 'CE', 'CS', 'DIT', 'DCE', 'DCS'];
   const institutes = ['CSPIT', 'DEPSTAR'];
   const currentYear = new Date().getFullYear();
@@ -161,8 +183,88 @@ const ClassManagement: React.FC = () => {
   useEffect(() => {
     if (selectedClass) {
       fetchStudents(selectedClass.class_id);
+      fetchClassTimetable(selectedClass.class_id);
     }
   }, [selectedClass]);
+
+  useEffect(() => {
+    setTimetableFile(null);
+    setTimetableError('');
+  }, [selectedClass]);
+
+  const fetchClassTimetable = async (classId: string) => {
+    try {
+      // Try to fetch with lab columns first
+      let { data, error } = await supabase
+        .from('class_timetables')
+        .select('day_index, slot_index, course, professor, room, is_lab, batch_number, lab_id')
+        .eq('class_id', classId)
+        .order('day_index, slot_index, batch_number');
+
+      // If lab columns don't exist, fall back to basic columns
+      if (error && error.message?.includes('column')) {
+        console.warn('Lab columns not found, using basic timetable structure');
+        const fallback = await supabase
+          .from('class_timetables')
+          .select('day_index, slot_index, course, professor, room')
+          .eq('class_id', classId)
+          .order('day_index, slot_index');
+        data = fallback.data;
+        error = fallback.error;
+      }
+
+      if (error) {
+        console.error('Fetch timetable error:', error);
+        throw error;
+      }
+
+      const init: Record<number, SlotEntry[]> = {};
+      const labs: Record<string, { enabled: boolean; batches: number }> = {};
+      for (let d = 0; d < timetableDays.length; d++) {
+        init[d] = Array.from({ length: timetableTimeSlots.length }, () => ({ course: '', professor: '', room: '' }));
+      }
+      
+      // Group lab entries by lab_id
+      const labGroups: Record<string, any[]> = {};
+      (data || []).forEach((row) => {
+        if (row.is_lab && row.lab_id) {
+          if (!labGroups[row.lab_id]) labGroups[row.lab_id] = [];
+          labGroups[row.lab_id].push(row);
+        } else if (init[row.day_index] && init[row.day_index][row.slot_index] !== undefined) {
+          init[row.day_index][row.slot_index] = {
+            course: row.course || '',
+            professor: row.professor || '',
+            room: row.room || ''
+          };
+        }
+      });
+      
+      // Store lab batches in array at the starting slot
+      Object.values(labGroups).forEach((batches) => {
+        if (batches.length > 0) {
+          const first = batches[0];
+          const key = `${first.day_index}-${first.slot_index}`;
+          labs[key] = { enabled: true, batches: batches.length };
+          // Store all batches at starting slot
+          if (init[first.day_index] && init[first.day_index][first.slot_index]) {
+            init[first.day_index][first.slot_index] = batches.map(b => ({
+              course: b.course || '',
+              professor: b.professor || '',
+              room: b.room || '',
+              is_lab: true,
+              batch_number: b.batch_number,
+              lab_id: b.lab_id
+            })) as any;
+          }
+        }
+      });
+      
+      setManualTimetable(init);
+      setLabMode(labs);
+    } catch (err) {
+      console.error('Failed to fetch timetable:', err);
+    }
+  };
 
   const fetchClasses = async () => {
     try {
@@ -402,6 +504,401 @@ const ClassManagement: React.FC = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteClassFaceEmbeddings = async (classDetail: ClassDetail) => {
+    try {
+      setLoading(true);
+      
+      toast({
+        title: "Processing...",
+        description: "Deleting face embeddings for all students in this class...",
+      });
+
+      const FACE_RECOGNITION_API_URL = 'http://localhost:8000';
+      
+      const response = await fetch(
+        `${FACE_RECOGNITION_API_URL}/class/${classDetail.class_id}/face-embeddings`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to delete face embeddings');
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: "Success",
+        description: `Successfully deleted face embeddings for ${result.deleted_count} students in "${classDetail.class_name}".`,
+      });
+
+    } catch (error) {
+      console.error('Error deleting face embeddings:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete face embeddings. Make sure the face recognition API is running.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTimetableUpload = async () => {
+    if (!selectedClass || !timetableFile) {
+      setTimetableError('Select a class and choose a file first.');
+      return;
+    }
+
+    try {
+      setTimetableError('');
+      setTimetableUploading(true);
+
+      const path = `${selectedClass.class_id}/${Date.now()}-${timetableFile.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('timetables')
+        .upload(path, timetableFile, {
+          upsert: true,
+          contentType: timetableFile.type
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from('timetables')
+        .getPublicUrl(path);
+
+      const publicUrl = publicUrlData?.publicUrl;
+
+      const { error: updateError } = await supabase
+        .from('class_details')
+        .update({ timetable_url: publicUrl })
+        .eq('class_id', selectedClass.class_id);
+
+      if (updateError) throw updateError;
+
+      setSelectedClass(prev => prev && prev.class_id === selectedClass.class_id
+        ? { ...prev, timetable_url: publicUrl }
+        : prev);
+      await fetchClasses();
+
+      toast({
+        title: 'Timetable updated',
+        description: 'Students will see the new timetable in their Schedule page.'
+      });
+      setTimetableFile(null);
+    } catch (error) {
+      console.error('Error uploading timetable:', error);
+      setTimetableError('Failed to upload timetable. Please try again.');
+      toast({
+        title: 'Upload failed',
+        description: 'Could not upload timetable. Check your connection and try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setTimetableUploading(false);
+    }
+  };
+
+  const handleTimetableRemove = async () => {
+    if (!selectedClass) return;
+    try {
+      setTimetableUploading(true);
+      const { error: updateError } = await supabase
+        .from('class_details')
+        .update({ timetable_url: null })
+        .eq('class_id', selectedClass.class_id);
+
+      if (updateError) throw updateError;
+
+      setSelectedClass(prev => prev && prev.class_id === selectedClass.class_id
+        ? { ...prev, timetable_url: undefined }
+        : prev);
+      await fetchClasses();
+
+      toast({
+        title: 'Timetable removed',
+        description: 'Students will no longer see a timetable for this class until one is uploaded again.'
+      });
+    } catch (error) {
+      console.error('Error removing timetable:', error);
+      toast({
+        title: 'Removal failed',
+        description: 'Could not remove timetable. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setTimetableUploading(false);
+    }
+  };
+
+  const downloadSampleTimetableCSV = () => {
+    const header = ['day','slot','course','professor','room'];
+    const rows = [
+      ['Monday','1','IT261','(ARP)','125'],
+      ['Monday','2','MA262','(VPN)','125'],
+      ['Monday','3','','',''],
+      ['Monday','4','IT265','(CUR)','125'],
+      ['Monday','5','LAB','(Tutor)','107'],
+      ['Monday','6','LAB','(Tutor)','107'],
+      ['Tuesday','1','MA262','(HSJ)','109'],
+      ['Tuesday','2','IT261','(ARP)','125']
+    ];
+    const csv = [header, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sample_timetable.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleTimetableExcelImport = async (file: File) => {
+    if (!selectedClass) return;
+    try {
+      setTimetableUploading(true);
+      // Parse CSV or Excel
+      let rows: any[] = [];
+      if (file.name.endsWith('.csv')) {
+        const text = await file.text();
+        rows = text.split(/\r?\n/).filter(line => line.trim()).map(line => line.split(',').map(cell => cell.trim()));
+      } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf);
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      } else {
+        toast({ title: 'Unsupported file', description: 'Use CSV or Excel (.xlsx/.xls).', variant: 'destructive' });
+        return;
+      }
+
+      // Filter out empty rows
+      rows = rows.filter(r => r && r.length > 0 && r.some((cell: any) => cell !== undefined && cell !== ''));
+
+      if (rows.length === 0) {
+        toast({ title: 'Empty file', description: 'The file contains no data.', variant: 'destructive' });
+        return;
+      }
+
+      // Expect header: day,slot,course,professor,room
+      const [header, ...dataRows] = rows;
+      const expected = ['day','slot','course','professor','room'];
+      const normalizedHeader = (header || []).map((h: string) => String(h).toLowerCase().trim());
+      const validHeader = expected.every((col, i) => normalizedHeader[i] === col);
+      if (!validHeader) {
+        console.error('Invalid header:', normalizedHeader, 'Expected:', expected);
+        toast({ title: 'Invalid format', description: 'Header must be: day,slot,course,professor,room', variant: 'destructive' });
+        return;
+      }
+
+      if (dataRows.length === 0) {
+        toast({ title: 'No data rows', description: 'The file contains only a header.', variant: 'destructive' });
+        return;
+      }
+
+      // Delete existing entries first
+      const { error: deleteError } = await supabase
+        .from('class_timetables')
+        .delete()
+        .eq('class_id', selectedClass.class_id);
+      if (deleteError) {
+        console.error('Delete error during import:', deleteError);
+        throw deleteError;
+      }
+
+      const inserts: any[] = [];
+      for (const r of dataRows) {
+        if (!r || r.length < 2) continue;
+        const dayStr = String(r[0] || '').trim();
+        const slotStr = String(r[1] || '').trim();
+        
+        if (!dayStr || !slotStr) continue;
+        
+        const dayIndex = timetableDays.findIndex(d => d.toLowerCase() === dayStr.toLowerCase());
+        const slotIndex = parseInt(slotStr) - 1;
+        
+        if (dayIndex < 0 || slotIndex < 0 || slotIndex >= timetableTimeSlots.length) {
+          console.warn('Invalid day/slot:', dayStr, slotStr);
+          continue;
+        }
+        
+        inserts.push({
+          class_id: selectedClass.class_id,
+          day_index: dayIndex,
+          slot_index: slotIndex,
+          course: String(r[2] || '').trim(),
+          professor: String(r[3] || '').trim(),
+          room: String(r[4] || '').trim(),
+          is_lab: false,
+          batch_number: null,
+          lab_id: null
+        });
+      }
+
+      if (inserts.length === 0) {
+        toast({ title: 'No valid rows', description: 'Check the day names and slot numbers.', variant: 'destructive' });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('class_timetables')
+        .insert(inserts);
+      
+      if (error) {
+        console.error('Insert error during import:', error);
+        
+        // If lab columns don't exist, try without them
+        if (error.message?.includes('column') && (error.message?.includes('is_lab') || error.message?.includes('batch_number') || error.message?.includes('lab_id'))) {
+          console.warn('Lab columns not found during import, using basic format');
+          const basicInserts = inserts.map(({ class_id, day_index, slot_index, course, professor, room }) => ({
+            class_id, day_index, slot_index, course, professor, room
+          }));
+          const { error: basicError } = await supabase
+            .from('class_timetables')
+            .insert(basicInserts);
+          if (basicError) {
+            console.error('Basic insert error:', basicError);
+            throw basicError;
+          }
+          toast({ 
+            title: 'Timetable imported (basic mode)', 
+            description: `Imported ${inserts.length} slots. Run lab_timetable_schema.sql for lab features.` 
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({ title: 'Timetable imported', description: `Successfully imported ${inserts.length} slots.` });
+      }
+
+      await fetchClassTimetable(selectedClass.class_id);
+    } catch (err: any) {
+      console.error('Timetable import failed:', err);
+      const errorMsg = err?.message || 'Please verify the file and try again.';
+      toast({ 
+        title: 'Import failed', 
+        description: errorMsg.includes('column') ? 'Database migration needed. Run lab_timetable_schema.sql' : errorMsg,
+        variant: 'destructive' 
+      });
+    } finally {
+      setTimetableUploading(false);
+    }
+  };
+
+  const saveManualTimetable = async () => {
+    if (!selectedClass) return;
+    try {
+      setTimetableSaving(true);
+      
+      // First, delete all existing entries for this class
+      const { error: deleteError } = await supabase
+        .from('class_timetables')
+        .delete()
+        .eq('class_id', selectedClass.class_id);
+      if (deleteError) {
+        console.error('Delete error:', deleteError);
+        throw deleteError;
+      }
+      
+      const upserts: any[] = [];
+      for (let d = 0; d < timetableDays.length; d++) {
+        const daySlots = manualTimetable[d] || [];
+        for (let s = 0; s < timetableTimeSlots.length; s++) {
+          const key = `${d}-${s}`;
+          const labInfo = labMode[key];
+          
+          if (labInfo?.enabled) {
+            // Lab mode: insert multiple batches
+            const labId = `lab-${selectedClass.class_id}-${d}-${s}`;
+            const entry = daySlots[s];
+            if (Array.isArray(entry)) {
+              entry.forEach((batch, idx) => {
+                if (batch.course || batch.professor || batch.room) {
+                  upserts.push({
+                    class_id: selectedClass.class_id,
+                    day_index: d,
+                    slot_index: s,
+                    course: batch.course,
+                    professor: batch.professor,
+                    room: batch.room,
+                    is_lab: true,
+                    batch_number: idx + 1,
+                    lab_id: labId
+                  });
+                }
+              });
+            }
+          } else {
+            // Regular slot
+            const entry = daySlots[s];
+            if (!Array.isArray(entry)) {
+              upserts.push({
+                class_id: selectedClass.class_id,
+                day_index: d,
+                slot_index: s,
+                course: entry?.course || '',
+                professor: entry?.professor || '',
+                room: entry?.room || '',
+                is_lab: false,
+                batch_number: null,
+                lab_id: null
+              });
+            }
+          }
+        }
+      }
+      
+      if (upserts.length > 0) {
+        const { error } = await supabase
+          .from('class_timetables')
+          .insert(upserts);
+        
+        if (error) {
+          console.error('Insert error:', error);
+          
+          // If lab columns don't exist, try without them
+          if (error.message?.includes('column') && (error.message?.includes('is_lab') || error.message?.includes('batch_number') || error.message?.includes('lab_id'))) {
+            console.warn('Lab columns not found, saving as basic timetable');
+            const basicUpserts = upserts.map(({ class_id, day_index, slot_index, course, professor, room }) => ({
+              class_id, day_index, slot_index, course, professor, room
+            }));
+            const { error: basicError } = await supabase
+              .from('class_timetables')
+              .insert(basicUpserts);
+            if (basicError) {
+              console.error('Basic insert error:', basicError);
+              throw basicError;
+            }
+            toast({ 
+              title: 'Timetable saved (basic mode)', 
+              description: 'Lab features require database migration. Run lab_timetable_schema.sql first.',
+              variant: 'default'
+            });
+            return;
+          }
+          throw error;
+        }
+      }
+      
+      toast({ title: 'Timetable saved', description: 'Manual edits and lab sessions have been applied.' });
+    } catch (err: any) {
+      console.error('Save manual timetable failed:', err);
+      const errorMsg = err?.message || 'Please try again.';
+      toast({ 
+        title: 'Save failed', 
+        description: errorMsg.includes('column') ? 'Database migration needed. Run lab_timetable_schema.sql' : errorMsg,
+        variant: 'destructive' 
+      });
+    } finally {
+      setTimetableSaving(false);
     }
   };
 
@@ -1080,7 +1577,7 @@ const ClassManagement: React.FC = () => {
                             <span>{classItem.student_count} Students</span>
                           </div>
                         </div>
-                        <div className="flex gap-2 mt-4">
+                        <div className="flex gap-2 mt-4 flex-wrap">
                           <Button 
                             size="sm" 
                             onClick={() => setSelectedClass(classItem)}
@@ -1093,6 +1590,32 @@ const ClassManagement: React.FC = () => {
                             <Edit className="h-4 w-4 mr-1" />
                             Edit
                           </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="outline" className="text-orange-600 hover:text-orange-700">
+                                <Eraser className="h-4 w-4 mr-1" />
+                                Clear Faces
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Face Embeddings</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will delete all face recognition data (embeddings) for {classItem.student_count} students in "{classItem.class_name}". 
+                                  Student records will remain intact. Students will need to be retrained for face recognition. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteClassFaceEmbeddings(classItem)}
+                                  className="bg-orange-600 hover:bg-orange-700"
+                                >
+                                  Delete Embeddings
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button size="sm" variant="outline" className="text-red-600">
@@ -1122,6 +1645,467 @@ const ClassManagement: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {selectedClass && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Timetable for {selectedClass.class_name}</span>
+                    <Badge variant="secondary">Class ID: {selectedClass.class_id}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <p className="text-sm text-gray-600">
+                    Upload a PDF or image timetable for this class. Students assigned to this class will see the latest version on their Schedule page.
+                  </p>
+
+                  {selectedClass.timetable_url ? (
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-700">Current timetable:</p>
+                      <a
+                        href={selectedClass.timetable_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-campusblue-600 underline"
+                      >
+                        View / Download timetable
+                      </a>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No timetable uploaded yet.</p>
+                  )}
+
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                    <Input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => setTimetableFile(e.target.files?.[0] || null)}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleTimetableUpload}
+                        disabled={!timetableFile || timetableUploading}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {selectedClass.timetable_url ? 'Replace timetable' : 'Upload timetable'}
+                      </Button>
+                      {selectedClass.timetable_url && (
+                        <Button
+                          variant="outline"
+                          onClick={handleTimetableRemove}
+                          disabled={timetableUploading}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {timetableFile && (
+                    <p className="text-xs text-gray-500">Selected file: {timetableFile.name}</p>
+                  )}
+                  {timetableError && (
+                    <p className="text-sm text-red-500">{timetableError}</p>
+                  )}
+
+                  {/* Structured timetable via Excel or Manual Edit */}
+                  <div className="pt-4 border-t">
+                    <Tabs defaultValue="excel" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="excel">Upload Excel/CSV</TabsTrigger>
+                        <TabsTrigger value="manual">Manual Edit (6 slots/day)</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="excel" className="space-y-3">
+                        <p className="text-sm text-gray-600">
+                          Expected columns: <span className="font-mono">day, slot, course, professor, room</span>. Day is one of {timetableDays.join(', ')}. Slot is 1–{timetableTimeSlots.length}.
+                        </p>
+                        <div className="flex gap-2">
+                          <Input type="file" accept=".csv,.xlsx,.xls" onChange={(e) => e.target.files && handleTimetableExcelImport(e.target.files[0])} />
+                          <Button variant="outline" onClick={downloadSampleTimetableCSV}>
+                            <Download className="h-4 w-4 mr-2" /> Sample CSV
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-500">Tip: Use CSV for quick edits, Excel for richer formatting.</p>
+                      </TabsContent>
+                      <TabsContent value="manual" className="space-y-4">
+                        <div className="mb-3 p-3 bg-blue-50 rounded-md">
+                          <p className="text-sm text-blue-900"><strong>Lab Mode:</strong> Check "Lab" to enable batch allocation (2-4 batches). Labs span 2 consecutive slots.</p>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full text-sm border">
+                            <thead>
+                              <tr>
+                                <th className="p-2 border bg-gray-50">Day</th>
+                                {timetableTimeSlots.map((t, i) => (
+                                  <th key={i} className="p-2 border bg-gray-50">Slot {i+1}<br/><span className="text-xs text-gray-500">{t}</span></th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {timetableDays.map((day, dIdx) => (
+                                <tr key={day}>
+                                  <td className="p-2 border font-medium align-top">{day}</td>
+                                  {Array.from({ length: timetableTimeSlots.length }).map((_, sIdx) => {
+                                    const key = `${dIdx}-${sIdx}`;
+                                    const labInfo = labMode[key] || { enabled: false, batches: 2 };
+                                    const entry = (manualTimetable[dIdx] || [])[sIdx];
+                                    const isOccupiedByPreviousLab = sIdx > 0 && labMode[`${dIdx}-${sIdx-1}`]?.enabled;
+                                    
+                                    if (isOccupiedByPreviousLab) {
+                                      return (
+                                        <td key={sIdx} className="p-2 border bg-gray-100 text-center text-xs text-gray-500">
+                                          Lab (continued)
+                                        </td>
+                                      );
+                                    }
+                                    
+                                    return (
+                                      <td key={sIdx} className="p-2 border align-top">
+                                        <div className="space-y-2">
+                                          <div className="flex items-center gap-2">
+                                            <input
+                                              type="checkbox"
+                                              id={`lab-${key}`}
+                                              checked={labInfo.enabled}
+                                              onChange={(e) => {
+                                                const newEnabled = e.target.checked;
+                                                setLabMode(prev => ({
+                                                  ...prev,
+                                                  [key]: { enabled: newEnabled, batches: newEnabled ? (prev[key]?.batches || 2) : 0 }
+                                                }));
+                                                if (newEnabled) {
+                                                  // Initialize batches
+                                                  const numBatches = labInfo.batches || 2;
+                                                  setManualTimetable(prev => ({
+                                                    ...prev,
+                                                    [dIdx]: (prev[dIdx] || Array.from({ length: timetableTimeSlots.length }, () => ({ course: '', professor: '', room: '' }))).map((v, i) => 
+                                                      i === sIdx ? Array.from({ length: numBatches }, () => ({ course: '', professor: '', room: '' })) as any : v
+                                                    )
+                                                  }));
+                                                } else {
+                                                  // Reset to regular slot
+                                                  setManualTimetable(prev => ({
+                                                    ...prev,
+                                                    [dIdx]: (prev[dIdx] || []).map((v, i) => i === sIdx ? { course: '', professor: '', room: '' } : v)
+                                                  }));
+                                                }
+                                              }}
+                                              className="rounded"
+                                            />
+                                            <label htmlFor={`lab-${key}`} className="text-xs font-semibold">Lab</label>
+                                            {labInfo.enabled && (
+                                              <Select
+                                                value={String(labInfo.batches)}
+                                                onValueChange={(val) => {
+                                                  const count = parseInt(val);
+                                                  setLabMode(prev => ({ ...prev, [key]: { enabled: true, batches: count } }));
+                                                  setManualTimetable(prev => ({
+                                                    ...prev,
+                                                    [dIdx]: (prev[dIdx] || []).map((v, i) => {
+                                                      if (i === sIdx) {
+                                                        const existing = Array.isArray(v) ? v : [];
+                                                        const newArr = Array.from({ length: count }, (_, idx) => existing[idx] || { course: '', professor: '', room: '' });
+                                                        return newArr as any;
+                                                      }
+                                                      return v;
+                                                    })
+                                                  }));
+                                                }}
+                                              >
+                                                <SelectTrigger className="h-6 text-xs w-16">
+                                                  <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="2">2</SelectItem>
+                                                  <SelectItem value="3">3</SelectItem>
+                                                  <SelectItem value="4">4</SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                            )}
+                                          </div>
+                                          
+                                          {labInfo.enabled && Array.isArray(entry) ? (
+                                            <div className="space-y-3">
+                                              {entry.map((batch, bIdx) => (
+                                                <div key={bIdx} className="p-2 bg-amber-50 rounded space-y-1 border border-amber-200">
+                                                  <div className="text-xs font-bold text-amber-900">Batch {bIdx + 1}</div>
+                                                  <Input
+                                                    placeholder="Course"
+                                                    value={batch.course || ''}
+                                                    className="h-7 text-xs"
+                                                    onChange={(e) => setManualTimetable(prev => ({
+                                                      ...prev,
+                                                      [dIdx]: (prev[dIdx] || []).map((v, i) => {
+                                                        if (i === sIdx && Array.isArray(v)) {
+                                                          return v.map((b, bi) => bi === bIdx ? { ...b, course: e.target.value } : b) as any;
+                                                        }
+                                                        return v;
+                                                      })
+                                                    }))}
+                                                  />
+                                                  <Input
+                                                    placeholder="Professor"
+                                                    value={batch.professor || ''}
+                                                    className="h-7 text-xs"
+                                                    onChange={(e) => setManualTimetable(prev => ({
+                                                      ...prev,
+                                                      [dIdx]: (prev[dIdx] || []).map((v, i) => {
+                                                        if (i === sIdx && Array.isArray(v)) {
+                                                          return v.map((b, bi) => bi === bIdx ? { ...b, professor: e.target.value } : b) as any;
+                                                        }
+                                                        return v;
+                                                      })
+                                                    }))}
+                                                  />
+                                                  <Input
+                                                    placeholder="Room"
+                                                    value={batch.room || ''}
+                                                    className="h-7 text-xs"
+                                                    onChange={(e) => setManualTimetable(prev => ({
+                                                      ...prev,
+                                                      [dIdx]: (prev[dIdx] || []).map((v, i) => {
+                                                        if (i === sIdx && Array.isArray(v)) {
+                                                          return v.map((b, bi) => bi === bIdx ? { ...b, room: e.target.value } : b) as any;
+                                                        }
+                                                        return v;
+                                                      })
+                                                    }))}
+                                                  />
+                                                </div>
+                                              ))}
+                                              <div className="text-xs text-gray-500 italic">Spans slots {sIdx+1} & {sIdx+2}</div>
+                                            </div>
+                                          ) : (
+                                            <div className="space-y-1">
+                                              <Input
+                                                placeholder="Course"
+                                                value={!Array.isArray(entry) ? entry?.course || '' : ''}
+                                                className="h-7 text-xs"
+                                                onChange={(e) => setManualTimetable((prev) => ({
+                                                  ...prev,
+                                                  [dIdx]: (prev[dIdx] ? [...prev[dIdx]] : Array.from({ length: timetableTimeSlots.length }, () => ({ course: '', professor: '', room: '' }))).map((v, i) => i === sIdx ? { ...(!Array.isArray(v) ? v : { course: '', professor: '', room: '' }), course: e.target.value } : v)
+                                                }))}
+                                              />
+                                              <Input
+                                                placeholder="Professor"
+                                                value={!Array.isArray(entry) ? entry?.professor || '' : ''}
+                                                className="h-7 text-xs"
+                                                onChange={(e) => setManualTimetable((prev) => ({
+                                                  ...prev,
+                                                  [dIdx]: (prev[dIdx] ? [...prev[dIdx]] : Array.from({ length: timetableTimeSlots.length }, () => ({ course: '', professor: '', room: '' }))).map((v, i) => i === sIdx ? { ...(!Array.isArray(v) ? v : { course: '', professor: '', room: '' }), professor: e.target.value } : v)
+                                                }))}
+                                              />
+                                              <Input
+                                                placeholder="Room"
+                                                value={!Array.isArray(entry) ? entry?.room || '' : ''}
+                                                className="h-7 text-xs"
+                                                onChange={(e) => setManualTimetable((prev) => ({
+                                                  ...prev,
+                                                  [dIdx]: (prev[dIdx] ? [...prev[dIdx]] : Array.from({ length: timetableTimeSlots.length }, () => ({ course: '', professor: '', room: '' }))).map((v, i) => i === sIdx ? { ...(!Array.isArray(v) ? v : { course: '', professor: '', room: '' }), room: e.target.value } : v)
+                                                }))}
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="flex justify-end">
+                          <Button onClick={saveManualTimetable} disabled={timetableSaving}>
+                            <Save className="h-4 w-4 mr-2" /> Save Timetable
+                          </Button>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                  
+                  {/* Timetable Preview - Editable */}
+                  <div className="mt-6 pt-6 border-t">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Eye className="h-5 w-5" />
+                        Quick Edit & Preview (Student View)
+                      </h3>
+                      <Button onClick={saveManualTimetable} disabled={timetableSaving} size="sm">
+                        <Save className="h-4 w-4 mr-2" /> Save Changes
+                      </Button>
+                    </div>
+                    <div className="overflow-x-auto bg-white shadow rounded-lg border">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Time</th>
+                            {timetableDays.map((day) => (
+                              <th key={day} className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">{day}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {timetableTimeSlots.map((slotLabel, rowIndex) => {
+                            const isSkipRow = timetableDays.some((_, dayIndex) => {
+                              const key = `${dayIndex}-${rowIndex - 1}`;
+                              return labMode[key]?.enabled;
+                            });
+                            
+                            if (isSkipRow) return null;
+                            
+                            return (
+                              <tr key={rowIndex} className="hover:bg-gray-50">
+                                <td className="px-3 py-2 text-xs text-gray-600 font-medium bg-gray-50 whitespace-nowrap align-top">{slotLabel}</td>
+                                {timetableDays.map((_, dayIndex) => {
+                                  const key = `${dayIndex}-${rowIndex}`;
+                                  const labInfo = labMode[key];
+                                  const entry = (manualTimetable[dayIndex] || [])[rowIndex];
+                                  const isLabArray = labInfo?.enabled && Array.isArray(entry);
+                                  
+                                  if (isLabArray) {
+                                    return (
+                                      <td key={`${rowIndex}-${dayIndex}`} className="px-2 py-2 align-top" rowSpan={2}>
+                                        <div className="space-y-2">
+                                          <div className="flex items-center justify-between">
+                                            <div className="text-xs font-bold text-purple-900 bg-purple-100 px-2 py-1 rounded">LAB</div>
+                                            <input
+                                              type="checkbox"
+                                              checked={true}
+                                              onChange={() => {
+                                                setLabMode(prev => ({ ...prev, [key]: { enabled: false, batches: 0 } }));
+                                                setManualTimetable(prev => ({
+                                                  ...prev,
+                                                  [dayIndex]: (prev[dayIndex] || []).map((v, i) => i === rowIndex ? { course: '', professor: '', room: '' } : v)
+                                                }));
+                                              }}
+                                              className="rounded"
+                                              title="Uncheck to convert to regular slot"
+                                            />
+                                          </div>
+                                          {(entry as any[]).map((batch, bIdx) => (
+                                            <div key={bIdx} className="p-2 bg-purple-50 rounded border border-purple-200 space-y-1">
+                                              <div className="text-xs font-bold text-purple-800">Batch {bIdx + 1}</div>
+                                              <Input
+                                                placeholder="Course"
+                                                value={batch.course || ''}
+                                                className="h-7 text-xs"
+                                                onChange={(e) => setManualTimetable(prev => ({
+                                                  ...prev,
+                                                  [dayIndex]: (prev[dayIndex] || []).map((v, i) => {
+                                                    if (i === rowIndex && Array.isArray(v)) {
+                                                      return v.map((b, bi) => bi === bIdx ? { ...b, course: e.target.value } : b) as any;
+                                                    }
+                                                    return v;
+                                                  })
+                                                }))}
+                                              />
+                                              <Input
+                                                placeholder="Professor"
+                                                value={batch.professor || ''}
+                                                className="h-7 text-xs"
+                                                onChange={(e) => setManualTimetable(prev => ({
+                                                  ...prev,
+                                                  [dayIndex]: (prev[dayIndex] || []).map((v, i) => {
+                                                    if (i === rowIndex && Array.isArray(v)) {
+                                                      return v.map((b, bi) => bi === bIdx ? { ...b, professor: e.target.value } : b) as any;
+                                                    }
+                                                    return v;
+                                                  })
+                                                }))}
+                                              />
+                                              <Input
+                                                placeholder="Room"
+                                                value={batch.room || ''}
+                                                className="h-7 text-xs"
+                                                onChange={(e) => setManualTimetable(prev => ({
+                                                  ...prev,
+                                                  [dayIndex]: (prev[dayIndex] || []).map((v, i) => {
+                                                    if (i === rowIndex && Array.isArray(v)) {
+                                                      return v.map((b, bi) => bi === bIdx ? { ...b, room: e.target.value } : b) as any;
+                                                    }
+                                                    return v;
+                                                  })
+                                                }))}
+                                              />
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </td>
+                                    );
+                                  } else {
+                                    const hasData = !Array.isArray(entry) && (entry?.course || entry?.professor || entry?.room);
+                                    return (
+                                      <td key={`${rowIndex}-${dayIndex}`} className="px-2 py-2 align-top">
+                                        <div className={`p-2 rounded space-y-1 ${hasData ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}`}>
+                                          <div className="flex items-center justify-between mb-1">
+                                            <span className="text-xs text-gray-500">Regular</span>
+                                            <input
+                                              type="checkbox"
+                                              checked={false}
+                                              onChange={() => {
+                                                setLabMode(prev => ({ ...prev, [key]: { enabled: true, batches: 2 } }));
+                                                setManualTimetable(prev => ({
+                                                  ...prev,
+                                                  [dayIndex]: (prev[dayIndex] || []).map((v, i) => 
+                                                    i === rowIndex ? Array.from({ length: 2 }, () => ({ course: '', professor: '', room: '' })) as any : v
+                                                  )
+                                                }));
+                                              }}
+                                              className="rounded"
+                                              title="Check to convert to lab"
+                                            />
+                                          </div>
+                                          <Input
+                                            placeholder="Course"
+                                            value={!Array.isArray(entry) ? entry?.course || '' : ''}
+                                            className="h-7 text-xs"
+                                            onChange={(e) => setManualTimetable((prev) => ({
+                                              ...prev,
+                                              [dayIndex]: (prev[dayIndex] || Array.from({ length: timetableTimeSlots.length }, () => ({ course: '', professor: '', room: '' }))).map((v, i) => 
+                                                i === rowIndex ? { ...(!Array.isArray(v) ? v : { course: '', professor: '', room: '' }), course: e.target.value } : v
+                                              )
+                                            }))}
+                                          />
+                                          <Input
+                                            placeholder="Professor"
+                                            value={!Array.isArray(entry) ? entry?.professor || '' : ''}
+                                            className="h-7 text-xs"
+                                            onChange={(e) => setManualTimetable((prev) => ({
+                                              ...prev,
+                                              [dayIndex]: (prev[dayIndex] || Array.from({ length: timetableTimeSlots.length }, () => ({ course: '', professor: '', room: '' }))).map((v, i) => 
+                                                i === rowIndex ? { ...(!Array.isArray(v) ? v : { course: '', professor: '', room: '' }), professor: e.target.value } : v
+                                              )
+                                            }))}
+                                          />
+                                          <Input
+                                            placeholder="Room"
+                                            value={!Array.isArray(entry) ? entry?.room || '' : ''}
+                                            className="h-7 text-xs"
+                                            onChange={(e) => setManualTimetable((prev) => ({
+                                              ...prev,
+                                              [dayIndex]: (prev[dayIndex] || Array.from({ length: timetableTimeSlots.length }, () => ({ course: '', professor: '', room: '' }))).map((v, i) => 
+                                                i === rowIndex ? { ...(!Array.isArray(v) ? v : { course: '', professor: '', room: '' }), room: e.target.value } : v
+                                              )
+                                            }))}
+                                          />
+                                        </div>
+                                      </td>
+                                    );
+                                  }
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">✏️ Edit directly in the preview. Check/uncheck the box to toggle between regular slot and lab mode. Click "Save Changes" to apply.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Edit Class Dialog */}
             <Dialog open={!!editingClass} onOpenChange={() => setEditingClass(null)}>

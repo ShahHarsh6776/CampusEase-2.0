@@ -1,0 +1,7 @@
+Time Slot,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday
+09:10-10:10,Data Structures|A-201|IT-3A,Algorithms|B-105|CS-2A,Database Systems|A-301|IT-3B,Web Development|Lab-1|IT-3A,Data Structures|A-201|IT-3A,
+10:10-11:10,Algorithms|B-105|CS-2A,Database Systems|A-301|IT-3B,Data Structures|A-201|IT-3A,Web Development|Lab-1|IT-3A,Algorithms|B-105|CS-2A,
+11:10-12:10,Web Development|C-102|CS-3A,Data Structures|A-201|IT-3A,Machine Learning|B-203|IT-4A,Database Systems|A-301|IT-3B,Web Development|C-102|CS-3A,
+12:10-01:10,,,Machine Learning|B-203|IT-4A,Database Systems|A-301|IT-3B,,
+02:20-03:20,Database Systems|A-301|IT-3B,Machine Learning|B-203|IT-4A,Web Development|C-102|CS-3A,Data Structures|A-201|IT-3A,Machine Learning|B-203|IT-4A,
+03:20-04:20,Machine Learning|B-203|IT-4A,Web Development|C-102|CS-3A,,Algorithms|B-105|CS-2A,,

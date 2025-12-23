@@ -256,3 +256,103 @@ class ImageProcessor:
             Thumbnail image
         """
         return cv2.resize(image, size, interpolation=cv2.INTER_AREA)
+    
+    @staticmethod
+    def draw_statistics_overlay(image: np.ndarray, total_detected: int, 
+                               identified: int, unknown: int) -> np.ndarray:
+        """
+        Draw statistics overlay on the image
+        
+        Args:
+            image: Input image
+            total_detected: Total number of faces detected
+            identified: Number of identified faces
+            unknown: Number of unknown faces
+            
+        Returns:
+            Image with statistics overlay
+        """
+        # Create a copy to avoid modifying original
+        annotated = image.copy()
+        height, width = annotated.shape[:2]
+        
+        # Define overlay parameters
+        overlay_height = 120
+        overlay_width = 400
+        padding = 20
+        
+        # Position overlay at top-right corner
+        x = width - overlay_width - padding
+        y = padding
+        
+        # Create semi-transparent overlay background
+        overlay = annotated.copy()
+        cv2.rectangle(overlay, (x, y), (x + overlay_width, y + overlay_height), 
+                     (0, 0, 0), -1)
+        cv2.addWeighted(overlay, 0.7, annotated, 0.3, 0, annotated)
+        
+        # Draw border
+        cv2.rectangle(annotated, (x, y), (x + overlay_width, y + overlay_height), 
+                     (255, 255, 255), 2)
+        
+        # Add title
+        title = "ATTENDANCE STATISTICS"
+        cv2.putText(annotated, title, (x + 10, y + 25), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        
+        # Add statistics
+        stats_y = y + 50
+        line_spacing = 25
+        
+        # Total detected
+        cv2.putText(annotated, f"Total Heads Detected: {total_detected}", 
+                   (x + 10, stats_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 
+                   (255, 255, 255), 1)
+        
+        # Identified (green)
+        cv2.rectangle(annotated, (x + 10, stats_y + 5), (x + 25, stats_y + 20), 
+                     (0, 255, 0), -1)
+        cv2.putText(annotated, f"Identified: {identified}", 
+                   (x + 35, stats_y + line_spacing), cv2.FONT_HERSHEY_SIMPLEX, 
+                   0.5, (0, 255, 0), 1)
+        
+        # Unknown (red)
+        cv2.rectangle(annotated, (x + 10, stats_y + line_spacing + 10), 
+                     (x + 25, stats_y + line_spacing + 25), (0, 0, 255), -1)
+        cv2.putText(annotated, f"Not Identified: {unknown}", 
+                   (x + 35, stats_y + 2 * line_spacing), cv2.FONT_HERSHEY_SIMPLEX, 
+                   0.5, (0, 0, 255), 1)
+        
+        return annotated
+    
+    @staticmethod
+    def save_annotated_image(image: np.ndarray, output_path: str, 
+                            quality: int = 95) -> bool:
+        """
+        Save annotated image to file
+        
+        Args:
+            image: Annotated image
+            output_path: Path to save the image
+            quality: JPEG quality (1-100)
+            
+        Returns:
+            True if saved successfully, False otherwise
+        """
+        try:
+            # Ensure directory exists
+            import os
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            
+            # Save image with high quality
+            if output_path.lower().endswith('.jpg') or output_path.lower().endswith('.jpeg'):
+                cv2.imwrite(output_path, image, 
+                           [cv2.IMWRITE_JPEG_QUALITY, quality])
+            else:
+                cv2.imwrite(output_path, image)
+            
+            logger.info(f"✅ Annotated image saved: {output_path}")
+            return True
+        except Exception as e:
+            logger.error(f"❌ Error saving annotated image: {e}")
+            return False

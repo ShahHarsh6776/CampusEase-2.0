@@ -10,14 +10,11 @@
   import SignupForm from "./pages/signuph";
   import Index from "./pages/Index";
   import Schedule from "./pages/Schedule";
-  import Courses from "./pages/Courses";
   import Resources from "./pages/Resources";
   import Events from "./pages/Events";
   import Profile from "./pages/Profile";
   import NotFound from "./pages/NotFound";
   import Reports from "./pages/Reports";
-  import Libraries from "./pages/Libraries";
-  import LostFound from "./pages/LostFound";
   import EmergencyAlerts from "./pages/EmergencyAlerts";
   import ProblemDashboard from "./pages/problem";
   import { UserProvider } from "./UserContext";
@@ -28,10 +25,11 @@ import AcademicEve from './pages/academic_eve';
 import CareerEve from './pages/career_eve';
 import SocialEve from './pages/social_eve';
 import AllEve from './pages/all_eve';
-import Community from './pages/Community';
 import Sem4 from './pages/sam_4';
 import Attendance from './pages/Attendance';
 import ClassManagement from './pages/ClassManagement';
+import FacultyManagement from './pages/FacultyManagement';
+import FacultySchedule from './pages/FacultySchedule';
 import ViewAttendance from './pages/ViewAttendance';
   const queryClient = new QueryClient();
 
@@ -110,25 +108,23 @@ import ViewAttendance from './pages/ViewAttendance';
             <Route path="/signup" element={<SignupForm />} />
             <Route path="/Index" element={<Index />} />
             <Route path="/schedule" element={<Schedule />} />
-            <Route path="/courses" element={<Courses />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/events" element={<Events />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/reports" element={<Reports />} />
-            <Route path="/libraries" element={<Libraries />} />
-            <Route path="/lost-found" element={<LostFound />} />
             <Route path="/emergency" element={<EmergencyAlerts />} />
             <Route path="/problems" element={<ProblemsOrMyReports />} />
             <Route path="/my-reports" element={<MyReports />} />
             <Route path="/all_eve" element={<AllEve />} />
             <Route path="/AdminPage" element={<AdminPage />} />
-            <Route path="/community" element={<Community />} />
             <Route path="/academic_eve" element={<AcademicEve />} />
             <Route path="/career_eve" element={<CareerEve />} />
             <Route path="/social_eve" element={<SocialEve />} />
             <Route path="/sem_4" element={<Sem4 />} /> {/* Added route for Semester 4 */}
             <Route path="/attendance" element={<FacultyRoute><Attendance /></FacultyRoute>} />
+            <Route path="/faculty-schedule" element={<FacultyRoute><FacultySchedule /></FacultyRoute>} />
             <Route path="/class-management" element={<AdminRoute><ClassManagement /></AdminRoute>} />
+            <Route path="/faculty-management" element={<AdminRoute><FacultyManagement /></AdminRoute>} />
             <Route path="/view-attendance" element={<ViewAttendance />} />
             <Route path="/data-analysis" element={<AdminRoute><DataAnalysis /></AdminRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

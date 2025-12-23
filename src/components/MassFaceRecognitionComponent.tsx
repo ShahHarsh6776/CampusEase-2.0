@@ -46,7 +46,7 @@ export const MassFaceRecognitionComponent: React.FC<MassFaceRecognitionProps> = 
   onAttendanceSaved,
   onClose
 }) => {
-  const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'review' | 'saving'>('upload');
+  const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'review' | 'saved' | 'annotated' | 'saving'>('upload');
   const [classPhoto, setClassPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -54,6 +54,12 @@ export const MassFaceRecognitionComponent: React.FC<MassFaceRecognitionProps> = 
   const [error, setError] = useState<string | null>(null);
   const [attendanceResults, setAttendanceResults] = useState<Student[]>([]);
   const [editedResults, setEditedResults] = useState<Student[]>([]);
+  const [annotatedImage, setAnnotatedImage] = useState<string | null>(null);
+  const [recognitionStats, setRecognitionStats] = useState<{
+    total_detected: number;
+    identified: number;
+    unidentified: number;
+  } | null>(null);
   const [saving, setSaving] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -144,6 +150,15 @@ export const MassFaceRecognitionComponent: React.FC<MassFaceRecognitionProps> = 
       if (result.success) {
         setAttendanceResults(result.attendance_results);
         setEditedResults([...result.attendance_results]);
+        
+        // Store annotated image and statistics
+        if (result.annotated_image) {
+          setAnnotatedImage(result.annotated_image);
+        }
+        if (result.statistics) {
+          setRecognitionStats(result.statistics);
+        }
+        
         setCurrentStep('review');
         
         toast({
@@ -218,9 +233,8 @@ export const MassFaceRecognitionComponent: React.FC<MassFaceRecognitionProps> = 
           description: `Successfully saved attendance for ${result.saved_records} students`,
         });
         
-        // Call parent callback with results
-        onAttendanceSaved(editedResults);
-        onClose();
+        // Move to saved state instead of closing
+        setCurrentStep('saved');
       } else {
         throw new Error(result.message || 'Failed to save attendance');
       }
@@ -253,6 +267,8 @@ export const MassFaceRecognitionComponent: React.FC<MassFaceRecognitionProps> = 
       case 'upload': return 'Upload Class Photo';
       case 'processing': return 'Processing Faces...';
       case 'review': return 'Review & Edit Attendance';
+      case 'saved': return 'Attendance Saved Successfully';
+      case 'annotated': return 'View Annotated Image & Edit';
       case 'saving': return 'Saving Attendance...';
       default: return 'Mass Face Recognition';
     }
@@ -448,9 +464,9 @@ export const MassFaceRecognitionComponent: React.FC<MassFaceRecognitionProps> = 
                               <Edit3 className="h-4 w-4 text-gray-500" />
                             )}
                             <div>
-                              <div className="font-medium">{student.student_name}</div>
+                              <div className="font-medium text-lg">{student.student_id}</div>
                               <div className="text-sm text-gray-500">
-                                ID: {student.student_id}
+                                {student.student_name}
                                 {student.detected && (
                                   <span className="ml-2 text-green-600">
                                     • Confidence: {(student.confidence * 100).toFixed(1)}%
@@ -521,6 +537,219 @@ export const MassFaceRecognitionComponent: React.FC<MassFaceRecognitionProps> = 
                 <h3 className="text-lg font-semibold">Saving Attendance...</h3>
                 <p className="text-gray-600">Finalizing attendance records</p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 5: Saved - Show option to view annotated image */}
+        {currentStep === 'saved' && (
+          <div className="space-y-6">
+            {/* Success Message */}
+            <div className="text-center space-y-4">
+              <div className="h-16 w-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+                <Check className="h-8 w-8 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-green-700">Attendance Saved Successfully!</h3>
+                <p className="text-gray-600">All attendance records have been saved to the database</p>
+              </div>
+            </div>
+
+            {/* Summary Statistics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="p-3">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{presentCount}</div>
+                  <div className="text-sm text-gray-600">Present</div>
+                </div>
+              </Card>
+              <Card className="p-3">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600">{absentCount}</div>
+                  <div className="text-sm text-gray-600">Absent</div>
+                </div>
+              </Card>
+              <Card className="p-3">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-yellow-600">{lateCount}</div>
+                  <div className="text-sm text-gray-600">Late</div>
+                </div>
+              </Card>
+              <Card className="p-3">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{detectedCount}</div>
+                  <div className="text-sm text-gray-600">Auto-Detected</div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Recognition Statistics (if available) */}
+            {recognitionStats && (
+              <Alert className="bg-blue-50 border-blue-200">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-900">
+                  <strong>Face Recognition Results:</strong> Detected {recognitionStats.total_detected} faces • 
+                  Identified {recognitionStats.identified} students • 
+                  {recognitionStats.unidentified} unknown faces
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              {annotatedImage && (
+                <Button
+                  onClick={() => setCurrentStep('annotated')}
+                  className="w-full"
+                  size="lg"
+                  variant="default"
+                >
+                  <FileImage className="h-4 w-4 mr-2" />
+                  View Annotated Image (with face detections)
+                </Button>
+              )}
+              
+              <Button
+                onClick={() => {
+                  onAttendanceSaved(editedResults);
+                  onClose();
+                }}
+                className="w-full"
+                size="lg"
+                variant="outline"
+              >
+                Close & Return to Attendance
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 6: View Annotated Image with Edit Options */}
+        {currentStep === 'annotated' && annotatedImage && (
+          <div className="space-y-6">
+            {/* Recognition Statistics */}
+            {recognitionStats && (
+              <Alert className="bg-blue-50 border-blue-200">
+                <AlertCircle className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-900 font-medium">
+                  Face Detection Results: {recognitionStats.total_detected} faces detected • 
+                  {recognitionStats.identified} identified (green boxes) • 
+                  {recognitionStats.unidentified} unidentified (red boxes)
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Annotated Image Display */}
+            <div className="border-2 border-blue-300 rounded-lg p-4 bg-gray-50">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg">Annotated Class Photo</h3>
+                  <div className="flex gap-2 text-xs">
+                    <Badge className="bg-green-500">Green = Identified</Badge>
+                    <Badge className="bg-red-500">Red = Unknown</Badge>
+                  </div>
+                </div>
+                
+                <div className="overflow-auto max-h-[500px] bg-white rounded-lg shadow-lg">
+                  <img
+                    src={`data:image/jpeg;base64,${annotatedImage}`}
+                    alt="Annotated Class Photo with Face Detection"
+                    className="w-full h-auto"
+                  />
+                </div>
+
+                <p className="text-sm text-gray-600 text-center">
+                  📸 Green boxes show identified students • Red boxes show unidentified faces
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Editable Student List */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Edit Attendance (if needed)</h3>
+                <Badge variant="outline">
+                  {editedResults.length} students
+                </Badge>
+              </div>
+
+              <div className="max-h-96 overflow-y-auto border rounded-lg">
+                <div className="grid gap-1 p-2">
+                  {editedResults.map((student) => (
+                    <Card key={student.student_id} className={`p-3 ${student.detected ? 'bg-green-50' : 'bg-gray-50'}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            {student.detected ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Edit3 className="h-4 w-4 text-gray-500" />
+                            )}
+                            <div>
+                              <div className="font-medium text-lg">{student.student_id}</div>
+                              <div className="text-sm text-gray-500">
+                                {student.student_name}
+                                {student.detected && (
+                                  <span className="ml-2 text-green-600">
+                                    • Confidence: {(student.confidence * 100).toFixed(1)}%
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {/* Status Buttons */}
+                          <div className="flex gap-1">{['present', 'absent', 'late'].map((status) => (
+                              <Button
+                                key={status}
+                                variant={student.status === status ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => updateStudentStatus(student.student_id, status as any)}
+                                className={`capitalize ${
+                                  student.status === status 
+                                    ? status === 'present' ? 'bg-green-600' : 
+                                      status === 'absent' ? 'bg-red-600' : 'bg-yellow-600'
+                                    : ''
+                                }`}
+                              >
+                                {status}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <Button
+                onClick={async () => {
+                  // Re-save with edited results
+                  await saveAttendance();
+                }}
+                className="w-full"
+                size="lg"
+                disabled={saving}
+              >
+                <Check className="h-4 w-4 mr-2" />
+                {saving ? 'Saving Changes...' : 'Save Attendance Changes'}
+              </Button>
+              
+              <Button
+                onClick={() => setCurrentStep('saved')}
+                variant="outline"
+                className="w-full"
+              >
+                Back to Summary
+              </Button>
             </div>
           </div>
         )}

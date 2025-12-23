@@ -20,6 +20,7 @@ export const UserProvider = ({ children }) => {
           emergency_contact:'',
           profile_photo: '',
           role: '',
+          class_id: '',
         };
   });
 

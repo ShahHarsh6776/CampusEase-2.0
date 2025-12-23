@@ -189,6 +189,30 @@ class DatabaseManager:
             logger.error(f"❌ Error deleting person ID {person_id}: {str(e)}")
             return False
     
+    async def delete_person_by_student_id(self, student_id: str) -> bool:
+        """
+        Delete person from database by student ID (also deletes related records due to CASCADE)
+        
+        Args:
+            student_id: Student ID
+            
+        Returns:
+            True if successful
+        """
+        try:
+            result = self.supabase.table('persons').delete().eq('student_id', student_id).execute()
+            
+            if result.data:
+                logger.info(f"✅ Person deleted by student ID: {student_id}")
+                return True
+            else:
+                logger.warning(f"⚠️ No person found with student ID: {student_id}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"❌ Error deleting person by student ID {student_id}: {str(e)}")
+            return False
+    
     # ==================== ATTENDANCE OPERATIONS ====================
     
     async def create_attendance_record(self, attendance: AttendanceTable) -> Optional[AttendanceTable]:

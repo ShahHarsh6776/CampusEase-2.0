@@ -17,7 +17,9 @@ import {
   FileText, 
   Settings, 
   Shield, 
-  BellRing 
+  BellRing,
+  CheckCircle2,
+  Circle
 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase/supabaseClient';
@@ -403,11 +405,12 @@ const handleLogout = async () => {
                     </h1>
                   )}
                 </h1>
-                <p className="text-gray-500 mb-2"> {userData.course_taken} || {userData.role}</p>
+                <p className="text-gray-500 mb-2">{userData.course_taken || 'Department'} | {userData.role}</p>
                 <div className="flex flex-wrap gap-2 justify-center md:justify-start mb-3">
                   <span className="bg-campusblue-100 text-campusblue-700 px-2 py-1 rounded text-xs font-medium">ID: {userData.user_id}</span>
-                  <span className="bg-campusteal-100 text-campusteal-700 px-2 py-1 rounded text-xs font-medium">GPA: 3.8</span>
-                  <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium">Credits: 68/120</span>
+                  {studentDepartment && (
+                    <span className="bg-campusteal-100 text-campusteal-700 px-2 py-1 rounded text-xs font-medium">{studentDepartment}</span>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-3 text-sm text-gray-600 justify-center md:justify-start">
                   <div className="flex items-center gap-1">
@@ -479,7 +482,6 @@ const handleLogout = async () => {
         <Tabs defaultValue="overview">
           <TabsList className="mb-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="academics">Academics</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="face-recognition">Face Recognition</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -551,46 +553,24 @@ const handleLogout = async () => {
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Calendar className="h-5 w-5 text-campusblue-500" />
-                      Upcoming Schedule
+                      Quick Links
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3 p-3 rounded-md hover:bg-gray-50">
-                        <div className="bg-campusblue-100 text-campusblue-700 w-16 h-16 flex flex-col items-center justify-center rounded-md">
-                          <span className="text-sm font-medium">MON</span>
-                          <span className="text-lg font-bold">18</span>
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium">CS301: Advanced Algorithms</p>
-                          <p className="text-sm text-gray-500">10:00 AM - 11:30 AM • Tech Building, Room 302</p>
-                        </div>
-                        <Button variant="ghost" size="sm">View</Button>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 rounded-md hover:bg-gray-50">
-                        <div className="bg-campusblue-100 text-campusblue-700 w-16 h-16 flex flex-col items-center justify-center rounded-md">
-                          <span className="text-sm font-medium">MON</span>
-                          <span className="text-lg font-bold">18</span>
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium">MATH204: Linear Algebra</p>
-                          <p className="text-sm text-gray-500">1:00 PM - 2:30 PM • Science Hall, Room 105</p>
-                        </div>
-                        <Button variant="ghost" size="sm">View</Button>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 rounded-md hover:bg-gray-50">
-                        <div className="bg-campusblue-100 text-campusblue-700 w-16 h-16 flex flex-col items-center justify-center rounded-md">
-                          <span className="text-sm font-medium">TUE</span>
-                          <span className="text-lg font-bold">19</span>
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium">CS Lab Session</p>
-                          <p className="text-sm text-gray-500">3:00 PM - 5:00 PM • Computer Lab, Room 105</p>
-                        </div>
-                        <Button variant="ghost" size="sm">View</Button>
-                      </div>
+                    <div className="space-y-3">
+                      <Button variant="outline" className="w-full justify-start" onClick={() => window.location.href = '/schedule'}>
+                        <Calendar className="h-4 w-4 mr-2" />
+                        View My Schedule
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start" onClick={() => window.location.href = '/resources'}>
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        Browse Resources
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start" onClick={() => window.location.href = '/events'}>
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Campus Events
+                      </Button>
                     </div>
-                    <Button variant="outline" className="w-full mt-4">View Full Schedule</Button>
                   </CardContent>
                 </Card>
               </div>
@@ -599,275 +579,30 @@ const handleLogout = async () => {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-campusblue-500" />
-                      Current Courses
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="p-3 border rounded-md hover:bg-gray-50">
-                        <p className="font-medium">CS301: Advanced Algorithms</p>
-                        <p className="text-xs text-gray-500">Dr. Sarah Johnson</p>
-                      </div>
-                      <div className="p-3 border rounded-md hover:bg-gray-50">
-                        <p className="font-medium">MATH204: Linear Algebra</p>
-                        <p className="text-xs text-gray-500">Prof. Michael Chen</p>
-                      </div>
-                      <div className="p-3 border rounded-md hover:bg-gray-50">
-                        <p className="font-medium">CS310: Database Systems</p>
-                        <p className="text-xs text-gray-500">Dr. Robert Lee</p>
-                      </div>
-                      <div className="p-3 border rounded-md hover:bg-gray-50">
-                        <p className="font-medium">ENG210: Technical Writing</p>
-                        <p className="text-xs text-gray-500">Prof. Linda Martinez</p>
-                      </div>
-                    </div>
-                    <Button variant="outline" className="w-full mt-4">All Courses</Button>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-campusblue-500" />
-                      Recent Activity
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="bg-gray-100 p-2 rounded-full mt-0.5">
-                          <FileText className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Assignment Submitted</p>
-                          <p className="text-xs text-gray-500">CS301: Algorithm Analysis Paper</p>
-                          <p className="text-xs text-gray-400">Yesterday at 11:42 PM</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="bg-gray-100 p-2 rounded-full mt-0.5">
-                          <BookOpen className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Grade Posted</p>
-                          <p className="text-xs text-gray-500">MATH204: Midterm Exam - 92%</p>
-                          <p className="text-xs text-gray-400">Oct 15, 2023 at 3:15 PM</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="bg-gray-100 p-2 rounded-full mt-0.5">
-                          <Calendar className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Event Registration</p>
-                          <p className="text-xs text-gray-500">Career Fair: Tech & Engineering</p>
-                          <p className="text-xs text-gray-400">Oct 10, 2023 at 9:30 AM</p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
-          
-          {/* Academics Tab */}
-          <TabsContent value="academics">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <GraduationCap className="h-5 w-5 text-campusblue-500" />
-                      Academic Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      <div>
-                        <p className="text-sm text-gray-500">Major</p>
-                        <p className="font-medium">Computer Science</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Minor</p>
-                        <p className="font-medium">Data Science</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Academic Level</p>
-                        <p className="font-medium">Junior (3rd Year)</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Admission Date</p>
-                        <p className="font-medium">August 2021</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Expected Graduation</p>
-                        <p className="font-medium">May 2025</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Academic Advisor</p>
-                        <p className="font-medium">Dr. James Wilson</p>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-medium mb-3">GPA Summary</h3>
-                      <div className="grid grid-cols-3 gap-4 text-center">
-                        <div className="border rounded-md p-3">
-                          <p className="text-xs text-gray-500">Cumulative</p>
-                          <p className="text-xl font-bold text-campusblue-600">3.8</p>
-                        </div>
-                        <div className="border rounded-md p-3">
-                          <p className="text-xs text-gray-500">Major</p>
-                          <p className="text-xl font-bold text-campusblue-600">3.9</p>
-                        </div>
-                        <div className="border rounded-md p-3">
-                          <p className="text-xs text-gray-500">Last Semester</p>
-                          <p className="text-xl font-bold text-campusblue-600">3.7</p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-campusblue-500" />
-                      Course History
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      <div>
-                        <h3 className="font-medium mb-3">Fall 2022</h3>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-md">
-                            <div>
-                              <p className="font-medium">CS201: Data Structures</p>
-                              <p className="text-xs text-gray-500">3 Credits</p>
-                            </div>
-                            <span className="font-medium text-green-600">A</span>
-                          </div>
-                          <div className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-md">
-                            <div>
-                              <p className="font-medium">MATH201: Calculus II</p>
-                              <p className="text-xs text-gray-500">4 Credits</p>
-                            </div>
-                            <span className="font-medium text-green-600">A-</span>
-                          </div>
-                          <div className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-md">
-                            <div>
-                              <p className="font-medium">PHYS101: Physics I</p>
-                              <p className="text-xs text-gray-500">4 Credits</p>
-                            </div>
-                            <span className="font-medium text-green-600">B+</span>
-                          </div>
-                          <div className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-md">
-                            <div>
-                              <p className="font-medium">ENG101: Composition</p>
-                              <p className="text-xs text-gray-500">3 Credits</p>
-                            </div>
-                            <span className="font-medium text-green-600">A</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-medium mb-3">Spring 2023</h3>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-md">
-                            <div>
-                              <p className="font-medium">CS210: Computer Systems</p>
-                              <p className="text-xs text-gray-500">3 Credits</p>
-                            </div>
-                            <span className="font-medium text-green-600">A</span>
-                          </div>
-                          <div className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-md">
-                            <div>
-                              <p className="font-medium">MATH202: Discrete Mathematics</p>
-                              <p className="text-xs text-gray-500">3 Credits</p>
-                            </div>
-                            <span className="font-medium text-green-600">A-</span>
-                          </div>
-                          <div className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-md">
-                            <div>
-                              <p className="font-medium">PHYS102: Physics II</p>
-                              <p className="text-xs text-gray-500">4 Credits</p>
-                            </div>
-                            <span className="font-medium text-blue-600">B</span>
-                          </div>
-                          <div className="flex justify-between items-center p-2 hover:bg-gray-50 rounded-md">
-                            <div>
-                              <p className="font-medium">HIS101: World History</p>
-                              <p className="text-xs text-gray-500">3 Credits</p>
-                            </div>
-                            <span className="font-medium text-green-600">A</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <Button variant="outline" className="w-full mt-5">View Complete Transcript</Button>
-                  </CardContent>
-                </Card>
-              </div>
-              
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <GraduationCap className="h-5 w-5 text-campusblue-500" />
-                      Degree Progress
+                      <User className="h-5 w-5 text-campusblue-500" />
+                      Student Information
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
                       <div>
-                        <div className="flex justify-between mb-1">
-                          <p className="text-sm font-medium">Core Requirements</p>
-                          <p className="text-sm">24/30 credits</p>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div className="bg-campusblue-500 h-2.5 rounded-full" style={{ width: '80%' }}></div>
-                        </div>
+                        <p className="text-sm text-gray-500">Department</p>
+                        <p className="font-medium">{studentDepartment || userData.course_taken || 'Not specified'}</p>
                       </div>
                       <div>
-                        <div className="flex justify-between mb-1">
-                          <p className="text-sm font-medium">Major Requirements</p>
-                          <p className="text-sm">32/45 credits</p>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div className="bg-campusblue-500 h-2.5 rounded-full" style={{ width: '71%' }}></div>
-                        </div>
+                        <p className="text-sm text-gray-500">Role</p>
+                        <p className="font-medium capitalize">{userData.role}</p>
                       </div>
                       <div>
-                        <div className="flex justify-between mb-1">
-                          <p className="text-sm font-medium">Electives</p>
-                          <p className="text-sm">12/15 credits</p>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div className="bg-campusblue-500 h-2.5 rounded-full" style={{ width: '80%' }}></div>
-                        </div>
+                        <p className="text-sm text-gray-500">Student ID</p>
+                        <p className="font-medium">{userData.user_id}</p>
                       </div>
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <p className="text-sm font-medium">General Education</p>
-                          <p className="text-sm">24/30 credits</p>
+                      {userData.email && (
+                        <div>
+                          <p className="text-sm text-gray-500">Email</p>
+                          <p className="font-medium text-sm">{userData.email}</p>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div className="bg-campusblue-500 h-2.5 rounded-full" style={{ width: '80%' }}></div>
-                        </div>
-                      </div>
-                      <div className="pt-3">
-                        <div className="flex justify-between mb-1">
-                          <p className="text-sm font-medium">Total Progress</p>
-                          <p className="text-sm">68/120 credits</p>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div className="bg-green-500 h-2.5 rounded-full" style={{ width: '57%' }}></div>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -876,36 +611,41 @@ const handleLogout = async () => {
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <FileText className="h-5 w-5 text-campusblue-500" />
-                      Academic Achievements
+                      Profile Completion
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="bg-yellow-100 p-1.5 rounded-full mt-0.5">
-                          <GraduationCap className="h-4 w-4 text-yellow-700" />
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm font-medium">Profile Status</span>
+                          <span className="text-sm text-gray-500">
+                            {[userData.mobile_num, userData.dob, userData.address, userData.emergency_contact].filter(Boolean).length}/4
+                          </span>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">Dean's List</p>
-                          <p className="text-xs text-gray-500">Fall 2022, Spring 2023</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="bg-blue-100 p-1.5 rounded-full mt-0.5">
-                          <FileText className="h-4 w-4 text-blue-700" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Programming Competition</p>
-                          <p className="text-xs text-gray-500">2nd Place, University Hackathon 2023</p>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-campusblue-500 h-2 rounded-full" 
+                            style={{ width: `${([userData.mobile_num, userData.dob, userData.address, userData.emergency_contact].filter(Boolean).length / 4) * 100}%` }}
+                          />
                         </div>
                       </div>
-                      <div className="flex items-start gap-3">
-                        <div className="bg-green-100 p-1.5 rounded-full mt-0.5">
-                          <BookOpen className="h-4 w-4 text-green-700" />
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          {userData.mobile_num ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Circle className="h-4 w-4 text-gray-300" />}
+                          <span>Mobile Number</span>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">Academic Scholarship</p>
-                          <p className="text-xs text-gray-500">Computer Science Merit Award, 2022-2023</p>
+                        <div className="flex items-center gap-2">
+                          {userData.dob ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Circle className="h-4 w-4 text-gray-300" />}
+                          <span>Date of Birth</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {userData.address ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Circle className="h-4 w-4 text-gray-300" />}
+                          <span>Address</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {userData.emergency_contact ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <Circle className="h-4 w-4 text-gray-300" />}
+                          <span>Emergency Contact</span>
                         </div>
                       </div>
                     </div>
@@ -1150,45 +890,38 @@ const handleLogout = async () => {
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <User className="h-5 w-5 text-campusblue-500" />
-                      Account Settings
+                      Edit Profile Information
                     </CardTitle>
+                    <CardDescription>Update your personal details. Click "Edit Profile" at the top to make changes.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-6">
                       <div>
-                        <h3 className="text-sm font-medium mb-3">Profile Information</h3>
+                        <h3 className="text-sm font-medium mb-3">Personal Information</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="text-sm text-gray-500 block mb-1">Full Name</label>
-                            <input 
-                              type="text" 
-                              value="Jane Marie Doe" 
-                              className="w-full px-3 py-2 border rounded-md"
-                            />
+                            <label className="text-sm text-gray-500 block mb-1">First Name</label>
+                            <p className="px-3 py-2 border rounded-md bg-gray-50">{userData.fname || 'Not set'}</p>
                           </div>
                           <div>
-                            <label className="text-sm text-gray-500 block mb-1">Display Name</label>
-                            <input 
-                              type="text" 
-                              value="Jane Doe" 
-                              className="w-full px-3 py-2 border rounded-md"
-                            />
+                            <label className="text-sm text-gray-500 block mb-1">Last Name</label>
+                            <p className="px-3 py-2 border rounded-md bg-gray-50">{userData.lname || 'Not set'}</p>
                           </div>
                           <div>
                             <label className="text-sm text-gray-500 block mb-1">Email Address</label>
-                            <input 
-                              type="email" 
-                              value="jane.doe@university.edu" 
-                              className="w-full px-3 py-2 border rounded-md"
-                            />
+                            <p className="px-3 py-2 border rounded-md bg-gray-50">{userData.email || 'Not set'}</p>
                           </div>
                           <div>
                             <label className="text-sm text-gray-500 block mb-1">Phone Number</label>
-                            <input 
-                              type="tel" 
-                              value="(555) 123-4567" 
-                              className="w-full px-3 py-2 border rounded-md"
-                            />
+                            <p className="px-3 py-2 border rounded-md bg-gray-50">{userData.mobile_num || 'Not set'}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-gray-500 block mb-1">Date of Birth</label>
+                            <p className="px-3 py-2 border rounded-md bg-gray-50">{userData.dob || 'Not set'}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-gray-500 block mb-1">Student/Faculty ID</label>
+                            <p className="px-3 py-2 border rounded-md bg-gray-50">{userData.user_id || 'Not set'}</p>
                           </div>
                         </div>
                       </div>
@@ -1197,73 +930,27 @@ const handleLogout = async () => {
                         <h3 className="text-sm font-medium mb-3">Address</h3>
                         <div className="grid grid-cols-1 gap-4">
                           <div>
-                            <label className="text-sm text-gray-500 block mb-1">Street Address</label>
-                            <input 
-                              type="text" 
-                              value="123 University Ave, Apt 4B" 
-                              className="w-full px-3 py-2 border rounded-md"
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm text-gray-500 block mb-1">City</label>
-                              <input 
-                                type="text" 
-                                value="College Town" 
-                                className="w-full px-3 py-2 border rounded-md"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-sm text-gray-500 block mb-1">State/Zip</label>
-                              <input 
-                                type="text" 
-                                value="ST 12345" 
-                                className="w-full px-3 py-2 border rounded-md"
-                              />
-                            </div>
+                            <label className="text-sm text-gray-500 block mb-1">Full Address</label>
+                            <p className="px-3 py-2 border rounded-md bg-gray-50 min-h-[80px]">{userData.address || 'Not provided'}</p>
                           </div>
                         </div>
                       </div>
                       
                       <div>
                         <h3 className="text-sm font-medium mb-3">Emergency Contact</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                           <div>
-                            <label className="text-sm text-gray-500 block mb-1">Contact Name</label>
-                            <input 
-                              type="text" 
-                              value="John Doe" 
-                              className="w-full px-3 py-2 border rounded-md"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-sm text-gray-500 block mb-1">Relationship</label>
-                            <input 
-                              type="text" 
-                              value="Father" 
-                              className="w-full px-3 py-2 border rounded-md"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-sm text-gray-500 block mb-1">Phone Number</label>
-                            <input 
-                              type="tel" 
-                              value="(555) 987-6543" 
-                              className="w-full px-3 py-2 border rounded-md"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-sm text-gray-500 block mb-1">Email Address</label>
-                            <input 
-                              type="email" 
-                              value="john.doe@example.com" 
-                              className="w-full px-3 py-2 border rounded-md"
-                            />
+                            <label className="text-sm text-gray-500 block mb-1">Emergency Contact Details</label>
+                            <p className="px-3 py-2 border rounded-md bg-gray-50 min-h-[80px]">{userData.emergency_contact || 'Not provided'}</p>
                           </div>
                         </div>
                       </div>
                       
-                      <Button className="w-full">Save Changes</Button>
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <p className="text-sm text-blue-800">
+                          💡 To update these details, click the <strong>"Edit Profile"</strong> button at the top of the page.
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -1353,59 +1040,14 @@ const handleLogout = async () => {
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <BellRing className="h-5 w-5 text-campusblue-500" />
-                      Notification Settings
+                      Notifications
                     </CardTitle>
+                    <CardDescription>Notification preferences coming soon</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-2">
-                        <div>
-                          <p className="font-medium">Email Notifications</p>
-                          <p className="text-xs text-gray-500">Receive updates via email</p>
-                        </div>
-                        <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-campusblue-500">
-                          <span className="translate-x-6 inline-block h-4 w-4 rounded-full bg-white transition"></span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between p-2">
-                        <div>
-                          <p className="font-medium">SMS Notifications</p>
-                          <p className="text-xs text-gray-500">Receive updates via text message</p>
-                        </div>
-                        <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200">
-                          <span className="translate-x-1 inline-block h-4 w-4 rounded-full bg-white transition"></span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between p-2">
-                        <div>
-                          <p className="font-medium">Push Notifications</p>
-                          <p className="text-xs text-gray-500">Receive mobile app notifications</p>
-                        </div>
-                        <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-campusblue-500">
-                          <span className="translate-x-6 inline-block h-4 w-4 rounded-full bg-white transition"></span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-6">
-                      <h3 className="text-sm font-medium mb-3">Notification Types</h3>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <input type="checkbox" id="grades" checked className="rounded text-campusblue-500" />
-                          <label htmlFor="grades" className="text-sm">Grade Updates</label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input type="checkbox" id="assignments" checked className="rounded text-campusblue-500" />
-                          <label htmlFor="assignments" className="text-sm">Assignment Deadlines</label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input type="checkbox" id="events" checked className="rounded text-campusblue-500" />
-                          <label htmlFor="events" className="text-sm">Campus Events</label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input type="checkbox" id="announcements" checked className="rounded text-campusblue-500" />
-                          <label htmlFor="announcements" className="text-sm">Course Announcements</label>
-                        </div>
-                      </div>
+                    <div className="text-center py-8 text-gray-500">
+                      <BellRing className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                      <p className="text-sm">Notification settings will be available in future updates.</p>
                     </div>
                   </CardContent>
                 </Card>

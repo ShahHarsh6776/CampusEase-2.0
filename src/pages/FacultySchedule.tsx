@@ -6,62 +6,63 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/supabase/supabaseClient';
 import { useUser } from '@/UserContext';
 
-const Schedule = () => {
+const FacultySchedule = () => {
   const { userData } = useUser();
   const [timetableUrl, setTimetableUrl] = useState<string | null>(null);
-  const [className, setClassName] = useState('');
+  const [facultyName, setFacultyName] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const timeSlots = ['09:10-10:10','10:10-11:10','11:10-12:10','12:10-01:10','02:20-03:20','03:20-04:20'];
-  type SlotEntry = { course: string; professor: string; room: string; is_lab?: boolean; batch_number?: number; lab_id?: string };
+  type SlotEntry = { course: string; room: string; class_name: string; is_lab?: boolean; batch_number?: number; lab_id?: string };
   const [grid, setGrid] = useState<Record<number, SlotEntry[]>>({});
 
   useEffect(() => {
     const fetchTimetable = async () => {
-      console.log('Schedule: Starting fetch, userData:', userData);
+      console.log('FacultySchedule: Starting fetch, userData:', userData);
       
-      if (!userData?.class_id) {
-        console.log('Schedule: No class_id found');
-        setError('No class assigned to your account.');
+      if (!userData?.user_id) {
+        console.log('FacultySchedule: No user_id found');
+        setError('Unable to identify faculty account.');
         setLoading(false);
         return;
       }
 
-      console.log('Schedule: Fetching for class_id:', userData.class_id);
+      console.log('FacultySchedule: Fetching for faculty user_id:', userData.user_id);
 
       try {
-        const { data, error: fetchError } = await supabase
-          .from('class_details')
-          .select('timetable_url, class_name')
-          .eq('class_id', userData.class_id)
+        // Fetch faculty details
+        const { data: facultyData, error: facultyError } = await supabase
+          .from('faculty')
+          .select('timetable_url, fname, lname')
+          .eq('user_id', userData.user_id)
           .maybeSingle();
 
-        console.log('Schedule: class_details fetch result:', { data, error: fetchError });
+        console.log('FacultySchedule: faculty fetch result:', { data: facultyData, error: facultyError });
 
-        if (fetchError) throw fetchError;
+        if (facultyError) throw facultyError;
 
-        setTimetableUrl(data?.timetable_url || null);
-        setClassName(data?.class_name || '');
+        setTimetableUrl(facultyData?.timetable_url || null);
+        setFacultyName(facultyData ? `${facultyData.fname} ${facultyData.lname}` : '');
 
-        // Fetch structured timetable (if exists)
+        // Fetch structured timetable
         let { data: slots, error: slotsError } = await supabase
-          .from('class_timetables')
-          .select('day_index, slot_index, course, professor, room, is_lab, batch_number, lab_id')
-          .eq('class_id', userData.class_id)
+          .from('faculty_timetables')
+          .select('day_index, slot_index, course, room, class_name, is_lab, batch_number, lab_id')
+          .eq('faculty_id', userData.user_id)
           .order('day_index, slot_index, batch_number');
         
-        console.log('Schedule: Initial timetable fetch:', { slots, error: slotsError });
+        console.log('FacultySchedule: Initial timetable fetch:', { slots, error: slotsError });
         
         // If lab columns don't exist, fall back to basic columns
         if (slotsError && slotsError.message?.includes('column')) {
-          console.warn('Lab columns not found in Schedule, using basic structure');
+          console.warn('Lab columns not found in FacultySchedule, using basic structure');
           const fallback = await supabase
-            .from('class_timetables')
-            .select('day_index, slot_index, course, professor, room')
-            .eq('class_id', userData.class_id)
+            .from('faculty_timetables')
+            .select('day_index, slot_index, course, room, class_name')
+            .eq('faculty_id', userData.user_id)
             .order('day_index, slot_index');
-          console.log('Schedule: Fallback fetch result:', fallback);
+          console.log('FacultySchedule: Fallback fetch result:', fallback);
           slots = fallback.data?.map(row => ({
             ...row,
             is_lab: false,
@@ -76,11 +77,11 @@ const Schedule = () => {
           throw slotsError;
         }
         
-        console.log('Schedule: Final slots data:', slots);
-        console.log('Schedule: Number of slots:', slots?.length || 0);
+        console.log('FacultySchedule: Final slots data:', slots);
+        console.log('FacultySchedule: Number of slots:', slots?.length || 0);
         
         const init: Record<number, SlotEntry[]> = {};
-        for (let d = 0; d < days.length; d++) init[d] = Array.from({ length: timeSlots.length }, () => ({ course: '', professor: '', room: '' }));
+        for (let d = 0; d < days.length; d++) init[d] = Array.from({ length: timeSlots.length }, () => ({ course: '', room: '', class_name: '' }));
         
         // Group lab entries
         const labGroups: Record<string, any[]> = {};
@@ -91,8 +92,8 @@ const Schedule = () => {
           } else if (init[row.day_index] && init[row.day_index][row.slot_index] !== undefined) {
             init[row.day_index][row.slot_index] = {
               course: row.course || '',
-              professor: row.professor || '',
-              room: row.room || ''
+              room: row.room || '',
+              class_name: row.class_name || ''
             };
           }
         });
@@ -104,8 +105,8 @@ const Schedule = () => {
             if (init[first.day_index] && init[first.day_index][first.slot_index]) {
               init[first.day_index][first.slot_index] = batches.map(b => ({
                 course: b.course || '',
-                professor: b.professor || '',
                 room: b.room || '',
+                class_name: b.class_name || '',
                 is_lab: true,
                 batch_number: b.batch_number,
                 lab_id: b.lab_id
@@ -131,9 +132,9 @@ const Schedule = () => {
     return Object.values(grid).some(daySlots => 
       daySlots.some(slot => {
         if (Array.isArray(slot)) {
-          return slot.some(batch => batch.course || batch.professor || batch.room);
+          return slot.some(batch => batch.course || batch.room || batch.class_name);
         }
-        return slot.course || slot.professor || slot.room;
+        return slot.course || slot.room || slot.class_name;
       })
     );
   }, [grid]);
@@ -149,7 +150,7 @@ const Schedule = () => {
       return (
         <iframe
           src={`${timetableUrl}#toolbar=0`}
-          title="Class timetable"
+          title="Faculty timetable"
           className="w-full h-[780px] rounded-lg border"
         />
       );
@@ -158,7 +159,7 @@ const Schedule = () => {
     return (
       <img
         src={timetableUrl}
-        alt="Class timetable"
+        alt="Faculty timetable"
         className="w-full rounded-lg border shadow-sm"
       />
     );
@@ -169,15 +170,15 @@ const Schedule = () => {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Schedule</h1>
-          <p className="text-gray-600">Your class timetable stays in sync with what admins upload for your class.</p>
+          <h1 className="text-3xl font-bold text-gray-900">My Teaching Schedule</h1>
+          <p className="text-gray-600">Your weekly timetable as uploaded by the administrator.</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Class Timetable</CardTitle>
+            <CardTitle>Faculty Timetable</CardTitle>
             <CardDescription>
-              {className ? `Class: ${className}` : 'The latest timetable for your assigned class will appear here.'}
+              {facultyName ? `Faculty: ${facultyName}` : 'Your teaching schedule for the week.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -214,7 +215,7 @@ const Schedule = () => {
                             {days.map((_, dayIndex) => {
                               const entry = (grid[dayIndex] || [])[rowIndex];
                               const isLabArray = Array.isArray(entry) && entry.length > 0 && entry[0]?.is_lab;
-                              const hasData = Array.isArray(entry) ? entry.some(e => e.course || e.professor || e.room) : (entry?.course || entry?.professor || entry?.room);
+                              const hasData = Array.isArray(entry) ? entry.some(e => e.course || e.room || e.class_name) : (entry?.course || entry?.room || entry?.class_name);
                               
                               if (isLabArray) {
                                 // Lab spanning 2 slots
@@ -226,7 +227,7 @@ const Schedule = () => {
                                         <div key={bIdx} className="p-3 bg-purple-50 rounded-lg border border-purple-200">
                                           <div className="text-xs font-bold text-purple-800 mb-1">Batch {batch.batch_number || bIdx + 1}</div>
                                           {batch.course && <div className="text-sm font-semibold text-purple-900">{batch.course}</div>}
-                                          {batch.professor && <div className="text-xs text-purple-700">{batch.professor}</div>}
+                                          {batch.class_name && <div className="text-xs text-purple-700">Class: {batch.class_name}</div>}
                                           {batch.room && <div className="text-xs text-purple-700">Room: {batch.room}</div>}
                                         </div>
                                       ))}
@@ -239,7 +240,7 @@ const Schedule = () => {
                                   <td key={`${rowIndex}-${dayIndex}`} className="px-4 py-3 align-top">
                                     <div className="p-3 bg-blue-50 rounded-lg">
                                       <div className="text-sm font-semibold text-blue-900">{entry.course}</div>
-                                      {entry.professor && <div className="text-xs text-blue-700">{entry.professor}</div>}
+                                      {entry.class_name && <div className="text-xs text-blue-700">Class: {entry.class_name}</div>}
                                       {entry.room && <div className="text-xs text-blue-700">Room: {entry.room}</div>}
                                     </div>
                                   </td>
@@ -276,7 +277,7 @@ const Schedule = () => {
                   {renderTimetable()}
                 </div>
               ) : (
-                <p className="text-gray-600">No timetable is available for your class yet. Please check back later or contact your administrator.</p>
+                <p className="text-gray-600">No timetable has been uploaded for you yet. Please check back later or contact your administrator.</p>
               )
             )}
           </CardContent>
@@ -287,6 +288,4 @@ const Schedule = () => {
   );
 };
 
-export default Schedule;
-
-              
+export default FacultySchedule;

@@ -83,12 +83,6 @@ const Index = () => {
               link="/schedule"
             />
             <FeatureCard 
-              icon={<BookOpen className="h-10 w-10" />} 
-              title="Course Management" 
-              description="Register for courses, access course materials, and track your academic progress." 
-              link="/courses"
-            />
-            <FeatureCard 
               icon={<MapPin className="h-10 w-10" />} 
               title="Campus Map" 
               description="Navigate campus with interactive maps showing buildings, classrooms, and facilities." 
@@ -105,12 +99,6 @@ const Index = () => {
               title="Campus News" 
               description="Get the latest news, events, and happenings around your campus community." 
               link="/news"
-            />
-            <FeatureCard 
-              icon={<MessagesSquare className="h-10 w-10" />} 
-              title="Student Community" 
-              description="Connect with classmates, join groups, and participate in campus discussions." 
-              link="/community"
             />
           </div>
         </section>

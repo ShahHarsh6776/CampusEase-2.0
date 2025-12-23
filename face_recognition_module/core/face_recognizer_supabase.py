@@ -317,21 +317,36 @@ class FaceRecognizerWithSupabase:
             if return_annotated_image and img is not None:
                 x1, y1, x2, y2 = map(int, face_data['bbox'])
                 color = (0, 255, 0) if identified_name != "Unknown" else (0, 0, 255)
+                thickness = 3  # Thicker bounding box for better visibility
                 
                 # Draw bounding box
-                cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+                cv2.rectangle(img, (x1, y1), (x2, y2), color, thickness)
                 
-                # Add label with confidence
-                label = f"{identified_name}"
+                # Add label with user_id instead of name
+                if identified_id:
+                    student_id = identified_person.get('student_id') or identified_person.get('employee_id') or f"ID-{identified_id}"
+                    label = f"{student_id}"
+                else:
+                    label = "Unknown"
                 if confidence > 0:
-                    label += f" ({confidence:.2f})"
+                    label += f" ({confidence:.2%})"
                 
                 # Add background for text
-                label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
-                cv2.rectangle(img, (x1, y1 - label_size[1] - 10), 
-                            (x1 + label_size[0], y1), color, -1)
-                cv2.putText(img, label, (x1, y1 - 5), 
-                          cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                font_scale = 0.7
+                font_thickness = 2
+                label_size = cv2.getTextSize(label, font, font_scale, font_thickness)[0]
+                
+                # Draw rounded rectangle background for label
+                bg_x1, bg_y1 = x1, y1 - label_size[1] - 15
+                bg_x2, bg_y2 = x1 + label_size[0] + 10, y1
+                
+                cv2.rectangle(img, (bg_x1, bg_y1), (bg_x2, bg_y2), color, -1)
+                cv2.rectangle(img, (bg_x1, bg_y1), (bg_x2, bg_y2), (255, 255, 255), 1)
+                
+                # Draw text
+                cv2.putText(img, label, (x1 + 5, y1 - 5), 
+                          font, font_scale, (255, 255, 255), font_thickness)
         
         processing_time = (time.time() - start_time) * 1000
         failed_recognitions = len(detected_faces) - successful_recognitions
@@ -351,14 +366,33 @@ class FaceRecognizerWithSupabase:
             'message': f"Recognized {successful_recognitions}/{len(detected_faces)} faces",
             'faces_detected': len(detected_faces),
             'successful_recognitions': successful_recognitions,
+            'failed_recognitions': failed_recognitions,
             'recognition_results': recognition_results,
             'recognition_time_ms': processing_time,
-            'session_id': session_id
+            'session_id': session_id,
+            'statistics': {
+                'total_detected': len(detected_faces),
+                'identified': successful_recognitions,
+                'not_identified': failed_recognitions
+            }
         }
         
         if return_annotated_image and img is not None:
+            # Import image processor for statistics overlay
+            from ..utils import ImageProcessor
+            processor = ImageProcessor()
+            
+            # Add statistics overlay to the image
+            img_with_stats = processor.draw_statistics_overlay(
+                img, 
+                total_detected=len(detected_faces),
+                identified=successful_recognitions,
+                unknown=failed_recognitions
+            )
+            
             # Encode annotated image back to bytes
-            _, encoded_img = cv2.imencode('.jpg', img)
+            _, encoded_img = cv2.imencode('.jpg', img_with_stats, 
+                                         [cv2.IMWRITE_JPEG_QUALITY, 95])
             result['annotated_image'] = encoded_img.tobytes()
         
         logger.info(f"🔍 Recognition completed: {result['message']} in {processing_time:.1f}ms")

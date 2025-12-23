@@ -206,6 +206,7 @@ const Login = () => {
           address: studentRecord.address,
           dob: studentRecord.dob,
           emergency_contact: studentRecord.emergency_contact,
+          class_id: studentRecord.class_id,
           role: 'student'
         });
 

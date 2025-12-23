@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from typing import List, Dict, Optional
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 import uvicorn
 from pydantic import BaseModel
 import logging
@@ -226,6 +226,8 @@ async def mass_face_recognition(
 ):
     """
     Perform mass face recognition on a class photo for attendance
+    Returns annotated image with green boxes for identified students,
+    red boxes for unknown faces, and statistics overlay
     
     Args:
         attendance_data: JSON string with attendance session information
@@ -257,8 +259,11 @@ async def mass_face_recognition(
         if enhanced_image is None:
             raise HTTPException(status_code=400, detail="Could not process the uploaded image")
         
-        # Perform mass recognition
-        recognition_results = await face_recognizer.recognize_faces(enhanced_image)
+        # Perform mass recognition with annotated image
+        recognition_results = await face_recognizer.recognize_faces(
+            enhanced_image, 
+            return_annotated_image=True
+        )
         
         if not recognition_results['success']:
             raise HTTPException(status_code=400, detail=recognition_results.get('message', 'Recognition failed'))
@@ -303,6 +308,33 @@ async def mass_face_recognition(
                     "detected": False
                 })
         
+        # Save annotated image to server (optional)
+        annotated_image_bytes = recognition_results.get('annotated_image')
+        annotated_image_path = None
+        annotated_image_base64 = None
+        
+        if annotated_image_bytes:
+            # Convert to base64 for frontend display
+            annotated_image_base64 = base64.b64encode(annotated_image_bytes).decode('utf-8')
+            
+            # Save to server for record keeping
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            class_id = attendance_info.get('class_id', 'unknown')
+            subject = attendance_info.get('subject', 'unknown').replace(' ', '_')
+            
+            # Create annotated images directory
+            annotated_dir = os.path.join('logs', 'annotated_images', class_id)
+            os.makedirs(annotated_dir, exist_ok=True)
+            
+            annotated_image_path = os.path.join(annotated_dir, f"{subject}_{timestamp}.jpg")
+            
+            # Convert bytes back to numpy array and save
+            np_annotated = image_processor.bytes_to_image(annotated_image_bytes)
+            if np_annotated is not None:
+                image_processor.save_annotated_image(np_annotated, annotated_image_path)
+        
+        statistics = recognition_results.get('statistics', {})
+        
         logger.info(f"✅ Mass recognition completed: {len(recognized_student_ids)}/{len(class_students)} students detected")
         
         return {
@@ -311,7 +343,15 @@ async def mass_face_recognition(
             "attendance_results": attendance_results,
             "total_faces_detected": len(detected_faces),
             "total_students_in_class": len(class_students),
-            "recognition_confidence_threshold": face_recognizer.similarity_threshold
+            "recognition_confidence_threshold": face_recognizer.similarity_threshold,
+            "annotated_image": annotated_image_base64,
+            "annotated_image_path": annotated_image_path,
+            "statistics": {
+                "total_detected": statistics.get('total_detected', 0),
+                "identified": statistics.get('identified', 0),
+                "unidentified": statistics.get('not_identified', 0)
+            },
+            "processing_time_ms": recognition_results.get('recognition_time_ms', 0)
         }
         
     except json.JSONDecodeError:
@@ -521,6 +561,147 @@ async def get_system_stats():
     except Exception as e:
         logger.error(f"❌ Error getting system stats: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get system stats: {str(e)}")
+
+@app.get("/download-annotated-image/{class_id}/{filename}")
+async def download_annotated_image(class_id: str, filename: str):
+    """
+    Download saved annotated attendance image
+    
+    Args:
+        class_id: Class identifier
+        filename: Image filename
+    """
+    try:
+        # Construct file path
+        file_path = os.path.join('logs', 'annotated_images', class_id, filename)
+        
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Annotated image not found")
+        
+        return FileResponse(
+            path=file_path,
+            media_type="image/jpeg",
+            filename=f"attendance_{filename}"
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ Error downloading annotated image: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to download image: {str(e)}")
+
+@app.get("/annotated-images/{class_id}")
+async def list_annotated_images(class_id: str):
+    """
+    List all annotated images for a class
+    
+    Args:
+        class_id: Class identifier
+    """
+    try:
+        images_dir = os.path.join('logs', 'annotated_images', class_id)
+        
+        if not os.path.exists(images_dir):
+            return {
+                "success": True,
+                "class_id": class_id,
+                "images": [],
+                "message": "No annotated images found for this class"
+            }
+        
+        # Get all image files
+        image_files = [
+            {
+                "filename": f,
+                "path": os.path.join(images_dir, f),
+                "created": datetime.fromtimestamp(os.path.getctime(os.path.join(images_dir, f))).isoformat(),
+                "size": os.path.getsize(os.path.join(images_dir, f))
+            }
+            for f in os.listdir(images_dir)
+            if f.lower().endswith(('.jpg', '.jpeg', '.png'))
+        ]
+        
+        # Sort by creation time (newest first)
+        image_files.sort(key=lambda x: x['created'], reverse=True)
+        
+        return {
+            "success": True,
+            "class_id": class_id,
+            "images": image_files,
+            "total_images": len(image_files)
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error listing annotated images: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to list images: {str(e)}")
+
+@app.delete("/class/{class_id}/face-embeddings")
+async def delete_class_face_embeddings(class_id: str):
+    """
+    Delete all face recognition embeddings for students in a specific class
+    This removes face training data but keeps student records intact
+    
+    Args:
+        class_id: Class identifier
+    """
+    try:
+        if not face_recognizer:
+            raise HTTPException(status_code=500, detail="Face recognition system not initialized")
+        
+        logger.info(f"🗑️ Deleting face embeddings for class: {class_id}")
+        
+        # Get all students in this class
+        try:
+            class_response = supabase.table('student_records').select('user_id').eq('class_id', class_id).execute()
+            class_students = class_response.data or []
+        except Exception as e:
+            logger.error(f"❌ Error fetching class students: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Failed to fetch class students: {str(e)}")
+        
+        if not class_students:
+            return {
+                "success": True,
+                "message": "No students found in this class",
+                "deleted_count": 0,
+                "class_id": class_id
+            }
+        
+        # Delete face embeddings for each student
+        deleted_count = 0
+        failed_count = 0
+        deleted_students = []
+        
+        for student in class_students:
+            student_id = student.get('user_id')
+            try:
+                # Delete person data from face recognition database
+                result = await face_recognizer.db_manager.delete_person_by_student_id(student_id)
+                if result:
+                    deleted_count += 1
+                    deleted_students.append(student_id)
+                    logger.info(f"✅ Deleted face data for student: {student_id}")
+            except Exception as e:
+                failed_count += 1
+                logger.error(f"❌ Failed to delete face data for student {student_id}: {str(e)}")
+        
+        # Refresh the person cache to reflect deletions
+        await face_recognizer._refresh_person_cache()
+        
+        logger.info(f"✅ Deleted face embeddings for {deleted_count} students in class {class_id}")
+        
+        return {
+            "success": True,
+            "message": f"Successfully deleted face embeddings for {deleted_count} students",
+            "deleted_count": deleted_count,
+            "failed_count": failed_count,
+            "total_students": len(class_students),
+            "class_id": class_id,
+            "deleted_student_ids": deleted_students
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error deleting class face embeddings: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete embeddings: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(

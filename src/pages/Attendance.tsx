@@ -96,6 +96,7 @@ const Attendance: React.FC = () => {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [customSubject, setCustomSubject] = useState<string>('');
   const [selectedClassType, setSelectedClassType] = useState<string>('');
   
   // UI state
@@ -105,8 +106,11 @@ const Attendance: React.FC = () => {
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [showFaceRecognition, setShowFaceRecognition] = useState(false);
 
-  // Predefined subjects and class types
-  const subjects = [
+  // Dynamic subjects from timetable
+  const [timetableSubjects, setTimetableSubjects] = useState<string[]>([]);
+
+  // Predefined subjects and class types (fallback if timetable not set)
+  const defaultSubjects = [
     'Data Structures',
     'Database Management',
     'Computer Networks',
@@ -118,6 +122,9 @@ const Attendance: React.FC = () => {
     'Mobile App Development',
     'Cyber Security'
   ];
+
+  // Use timetable subjects if available, otherwise use default
+  const subjects = timetableSubjects.length > 0 ? timetableSubjects : defaultSubjects;
 
   const classTypes = [
     'Theory',
@@ -140,6 +147,7 @@ const Attendance: React.FC = () => {
   
   useEffect(() => {
     fetchClasses();
+    fetchFacultyTimetableSubjects();
   }, []);
 
   // Only fetch students when class ID changes
@@ -184,6 +192,40 @@ const Attendance: React.FC = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFacultyTimetableSubjects = async () => {
+    if (!userData?.user_id) return;
+
+    try {
+      // Fetch unique subjects from faculty timetable
+      const { data, error } = await supabase
+        .from('faculty_timetables')
+        .select('course')
+        .eq('faculty_id', userData.user_id);
+
+      if (error) {
+        console.log('No timetable found or error fetching:', error);
+        return; // Silently fail and use default subjects
+      }
+
+      if (data && data.length > 0) {
+        // Extract unique non-empty courses
+        const uniqueSubjects = [...new Set(
+          data
+            .map(item => item.course)
+            .filter(course => course && course.trim() !== '')
+        )];
+
+        if (uniqueSubjects.length > 0) {
+          console.log('Loaded subjects from timetable:', uniqueSubjects);
+          setTimetableSubjects(uniqueSubjects);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching timetable subjects:', err);
+      // Continue with default subjects
     }
   };
 
@@ -267,10 +309,15 @@ const Attendance: React.FC = () => {
   };
 
   const markAttendance = async (studentId: string, status: 'present' | 'absent' | 'late') => {
-    if (!selectedSubject || !selectedClassType || !selectedClass) {
+    // Use custom subject if "custom" is selected, otherwise use selected subject
+    const actualSubject = selectedSubject === 'custom' ? customSubject : selectedSubject;
+    
+    if (!actualSubject || !selectedClassType || !selectedClass) {
       toast({
         title: "Missing Information",
-        description: "Please select class, subject and class type.",
+        description: selectedSubject === 'custom' && !customSubject 
+          ? "Please enter a custom subject name."
+          : "Please select class, subject and class type.",
         variant: "destructive"
       });
       return;
@@ -293,7 +340,7 @@ const Attendance: React.FC = () => {
       roll_no: student.roll_no,
       department: student.department || selectedClass.department,
       date: selectedDate,
-      subject: selectedSubject,
+      subject: actualSubject,
       class_type: selectedClassType,
       status,
       marked_by: userData?.user_id || '',
@@ -303,7 +350,7 @@ const Attendance: React.FC = () => {
     try {
       // Check if attendance already exists in our local state
       const existingIndex = attendance.findIndex(
-        a => a.user_id === studentId && a.date === selectedDate && a.subject === selectedSubject
+        a => a.user_id === studentId && a.date === selectedDate && a.subject === actualSubject
       );
 
       let updatedAttendance = [...attendance];
@@ -319,7 +366,7 @@ const Attendance: React.FC = () => {
           })
           .eq('user_id', studentId)
           .eq('date', selectedDate)
-          .eq('subject', selectedSubject)
+          .eq('subject', actualSubject)
           .eq('marked_by', userData?.user_id)
           .select()
           .single();
@@ -431,10 +478,15 @@ const Attendance: React.FC = () => {
   };
 
   const saveAllAttendance = async () => {
-    if (!selectedSubject || !selectedClassType || !selectedClass) {
+    // Use custom subject if "custom" is selected, otherwise use selected subject
+    const actualSubject = selectedSubject === 'custom' ? customSubject : selectedSubject;
+    
+    if (!actualSubject || !selectedClassType || !selectedClass) {
       toast({
         title: "Missing Information",
-        description: "Please select class, subject and class type before saving.",
+        description: selectedSubject === 'custom' && !customSubject 
+          ? "Please enter a custom subject name."
+          : "Please select class, subject and class type before saving.",
         variant: "destructive"
       });
       return;
@@ -465,7 +517,7 @@ const Attendance: React.FC = () => {
           .select('id')
           .eq('user_id', record.user_id)
           .eq('date', selectedDate)
-          .eq('subject', selectedSubject)
+          .eq('subject', actualSubject)
           .eq('marked_by', userData?.user_id)
           .single();
         
@@ -809,8 +861,16 @@ const Attendance: React.FC = () => {
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="subject">Subject</Label>
-                        <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                        <Label htmlFor="subject">Subject {timetableSubjects.length > 0 && <span className="text-xs text-green-600">(From Timetable)</span>}</Label>
+                        <Select 
+                          value={selectedSubject} 
+                          onValueChange={(value) => {
+                            setSelectedSubject(value);
+                            if (value !== 'custom') {
+                              setCustomSubject('');
+                            }
+                          }}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select subject" />
                           </SelectTrigger>
@@ -820,8 +880,19 @@ const Attendance: React.FC = () => {
                                 {subject}
                               </SelectItem>
                             ))}
+                            <SelectItem value="custom">
+                              ✏️ Enter Custom Subject...
+                            </SelectItem>
                           </SelectContent>
                         </Select>
+                        {selectedSubject === 'custom' && (
+                          <Input
+                            placeholder="Enter subject name"
+                            value={customSubject}
+                            onChange={(e) => setCustomSubject(e.target.value)}
+                            className="mt-2"
+                          />
+                        )}
                       </div>
                       
                       <div className="space-y-2">

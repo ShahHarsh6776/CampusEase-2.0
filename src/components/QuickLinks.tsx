@@ -14,36 +14,30 @@ interface QuickLink {
 const quickLinks: QuickLink[] = [
   {
     id: 1,
-    title: 'Course Registration',
-    path: '/courses/register',
-    icon: <span className="text-2xl">📝</span>
-  },
-  {
-    id: 2,
     title: 'Library Resources',
     path: '/resources/library',
     icon: <span className="text-2xl">📚</span>
   },
   {
-    id: 3,
+    id: 2,
     title: 'Campus Map',
     path: '/map',
     icon: <span className="text-2xl">🗺️</span>
   },
   {
-    id: 4,
+    id: 3,
     title: 'Student Services',
     path: '/services',
     icon: <span className="text-2xl">🎓</span>
   },
   {
-    id: 5,
+    id: 4,
     title: 'Academic Calendar',
     path: '/calendar',
     icon: <span className="text-2xl">📅</span>
   },
   {
-    id: 6,
+    id: 5,
     title: 'Contact Support',
     path: '/support',
     icon: <span className="text-2xl">📞</span>
